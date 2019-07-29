@@ -6,10 +6,16 @@
  */
 
 #include "Sensor.h"
+#include "gmputil.h"
+#include <Arduino.h>
 
-Sensor::Sensor(int minValue, int maxValue, int thresholdValuePercent, char analogPin) {
+Sensor::Sensor(int minValue, int maxValue, char analogPin) {
 	this->minValue = minValue;
 	this->maxValue = maxValue;
 	this->analogPin = analogPin;
 	this->thresholdValuePercent = thresholdValuePercent;
+}
+
+double Sensor::getPercentValue() {
+	return (gmputil::calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
 }

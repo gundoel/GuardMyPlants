@@ -8,10 +8,11 @@
 #ifndef SOILMOISTURESENSOR_H_
 #define SOILMOISTURESENSOR_H_
 
-class SoilMoistureSensor {
+#include "Sensor.h"
+
+class SoilMoistureSensor : public Sensor {
 public:
-	SoilMoistureSensor(int minValue, int maxValue, int criticalLevelPercent, char analogPin) {
-	}
+	SoilMoistureSensor(int minValue, int maxValue, char analogPin);
 };
 
 

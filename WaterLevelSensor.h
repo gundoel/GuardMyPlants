@@ -11,9 +11,7 @@
 
 class WaterLevelSensor : public Sensor {
 	public:
-		WaterLevelSensor(int minValue, int maxValue, int thresholdValuePercent, char analogPin);
-		void printValue(int value);
-		double getWaterLevel();
+		WaterLevelSensor(int minValue, int maxValue, char analogPin);
 		boolean isWaterLevelOK();
 
 };
