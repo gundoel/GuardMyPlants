@@ -10,11 +10,10 @@
 
 #include "Sensor.h"
 
-class SoilMoistureSensor : public Sensor {
+class SoilMoistureSensor: public Sensor {
 public:
-	SoilMoistureSensor(int minValue, int maxValue, char analogPin);
+	SoilMoistureSensor(int minValue, int maxValue, int analogPin);
+	double getPercentValue();
 };
-
-
 
 #endif /* SOILMOISTURESENSOR_H_ */

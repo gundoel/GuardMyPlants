@@ -9,7 +9,16 @@
 #include "gmputil.h"
 #include <Arduino.h>
 
-Sensor::Sensor(int minValue, int maxValue, char analogPin) {
+#define DEBUG //
+#ifdef DEBUG
+#define DEBUG_PRINT(x) Serial.print(x)
+#define DEBUG_PRINTLN(x) Serial.println(x)
+#else
+#define DEBUG_PRINT(x)
+#define DEBUG_PRINTLN(x)
+#endif
+
+Sensor::Sensor(int minValue, int maxValue, int analogPin) {
 	this->minValue = minValue;
 	this->maxValue = maxValue;
 	this->analogPin = analogPin;
@@ -17,5 +26,7 @@ Sensor::Sensor(int minValue, int maxValue, char analogPin) {
 }
 
 double Sensor::getPercentValue() {
+	DEBUG_PRINTLN(analogRead(analogPin));
+	DEBUG_PRINTLN(gmputil::calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
 	return (gmputil::calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
 }
