@@ -8,13 +8,8 @@
 #include <Arduino.h>
 #include "Sensor.h"
 #include "SoilMoistureSensor.h"
-#include "gmputil.h"
 
-SoilMoistureSensor::SoilMoistureSensor(int minValue, int maxValue, int analogPin) : Sensor(minValue, maxValue, analogPin)
+SoilMoistureSensor::SoilMoistureSensor(int minValue, int maxValue, int analogPin, double thresholdValuePercent) : Sensor(minValue, maxValue, analogPin, thresholdValuePercent)
 {
 	pinMode(analogPin, INPUT);
-}
-
-double SoilMoistureSensor::getPercentValue() {
-	return gmputil::calculatePercentValue(minValue, maxValue, analogRead(analogPin));
 }

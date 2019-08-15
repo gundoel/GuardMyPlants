@@ -12,7 +12,7 @@
 
 class SoilMoistureSensor: public Sensor {
 public:
-	SoilMoistureSensor(int minValue, int maxValue, int analogPin);
+	SoilMoistureSensor(int minValue, int maxValue, int analogPin, double thresholdValuePercent);
 	double getPercentValue();
 };
 

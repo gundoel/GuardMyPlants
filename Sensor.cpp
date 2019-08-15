@@ -5,28 +5,38 @@
  *      Author: TAARISI3
  */
 
+#include <Arduino.h>
 #include "Sensor.h"
 #include "gmputil.h"
-#include <Arduino.h>
+#include "config.h"
 
-#define DEBUG //
-#ifdef DEBUG
-#define DEBUG_PRINT(x) Serial.print(x)
-#define DEBUG_PRINTLN(x) Serial.println(x)
-#else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINTLN(x)
-#endif
-
-Sensor::Sensor(int minValue, int maxValue, int analogPin) {
-	this->minValue = minValue;
-	this->maxValue = maxValue;
-	this->analogPin = analogPin;
-	this->thresholdValuePercent = thresholdValuePercent;
+Sensor::Sensor(int minValue, int maxValue, int analogPin, double thresholdValuePercent) :
+minValue(minValue), maxValue(maxValue), analogPin(analogPin), thresholdValuePercent(thresholdValuePercent)  {
+	pinMode(analogPin, INPUT);
 }
 
 double Sensor::getPercentValue() {
 	DEBUG_PRINTLN(analogRead(analogPin));
 	DEBUG_PRINTLN(gmputil::calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
 	return (gmputil::calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
+}
+
+int Sensor::getAnalogPin() const {
+	return analogPin;
+}
+
+int Sensor::getCurrentValue() const {
+	return currentValue;
+}
+
+void Sensor::setCurrentValue(int currentValue = 0) {
+	this->currentValue = currentValue;
+}
+
+double Sensor::getThresholdValuePercent() const {
+	return thresholdValuePercent;
+}
+
+void Sensor::setThresholdValuePercent(double thresholdValuePercent) {
+	this->thresholdValuePercent = thresholdValuePercent;
 }
