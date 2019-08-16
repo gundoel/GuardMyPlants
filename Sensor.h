@@ -10,10 +10,10 @@
 
 class Sensor {
 protected:
-	int analogPin; // Pin, an dem der Sensor angeschlossen ist
 	int currentValue = 0; // Aktueller Messwert
 	int minValue; // Hoechster Wert, den der Sensor liefert.
 	int maxValue; // Tiefster Wert, den der Sensor liefert.
+	int analogPin; // Pin, an dem der Sensor angeschlossen ist
 	double thresholdValuePercent; //Schwellwert für Alarm/Aktion
 
 public:

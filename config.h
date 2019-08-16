@@ -14,14 +14,15 @@
  * PORTS
  **************************************************************************************************/
 
-//TODO Datentyp in uint8_t aendern
+//TODO Datentyp in uint8_t aendern, #define verwenden anstatt Konstanten
 const int WATER_LEVEL_SENSOR_PIN = A0;
 const int SOIL_MOISTURE_SENSOR_1_PIN = A1;
 const int SOIL_MOISTURE_SENSOR_2_PIN = A2;
-const int WATERPUMP_1_PIN = A3;
-const int WATERPUMP_2_PIN = A4;
-//const int ANALOG_KEYPAD_PIN = A5;
-const int LCD_PINS[] = {5, 6, 7, 8, 9, 10};
+// PWM Pins
+const int WATERPUMP_1_PIN = 3;
+const int WATERPUMP_2_PIN = 5;
+//const int ANALOG_KEYPAD_PIN = A4;
+const int LCD_PINS[] = {4, 6, 7, 8, 9, 10};
 const int RUN_LED_PIN = 11;
 const int ERROR_LED_PIN = 12;
 const int RUN_SWITCH_PIN = 13;
