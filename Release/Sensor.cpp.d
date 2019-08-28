@@ -1,4 +1,4 @@
-Sensor.cpp.o: ..\Sensor.cpp ..\Sensor.h ..\gmputil.h \
+Sensor.cpp.o: ..\Sensor.cpp \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/binary.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/WCharacter.h \
@@ -9,11 +9,8 @@ Sensor.cpp.o: ..\Sensor.cpp ..\Sensor.h ..\gmputil.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Printable.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/USBAPI.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h \
- C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\variants\standard/pins_arduino.h
-
-..\Sensor.h:
-
-..\gmputil.h:
+ C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\variants\standard/pins_arduino.h \
+ ..\Sensor.h ..\config.h ..\gmputil.hpp
 
 C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h:
 
@@ -36,3 +33,9 @@ C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cor
 C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h:
 
 C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\variants\standard/pins_arduino.h:
+
+..\Sensor.h:
+
+..\config.h:
+
+..\gmputil.hpp:

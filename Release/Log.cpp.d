@@ -1,4 +1,4 @@
-WaterLevelSensor.cpp.o: ..\WaterLevelSensor.cpp \
+Log.cpp.o: ..\Log.cpp ..\Log.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/binary.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/WCharacter.h \
@@ -10,7 +10,9 @@ WaterLevelSensor.cpp.o: ..\WaterLevelSensor.cpp \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/USBAPI.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\variants\standard/pins_arduino.h \
- ..\Sensor.h ..\WaterLevelSensor.h
+ ..\LogMessage.h
+
+..\Log.h:
 
 C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h:
 
@@ -34,6 +36,4 @@ C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cor
 
 C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\variants\standard/pins_arduino.h:
 
-..\Sensor.h:
-
-..\WaterLevelSensor.h:
+..\LogMessage.h:

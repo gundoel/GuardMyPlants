@@ -9,9 +9,10 @@ RM := del
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include subdir.mk
+-include libraries\time\subdir.mk
+-include libraries\LiquidCrystal\src\subdir.mk
 -include libraries\Keypad\src\subdir.mk
 -include libraries\HID\src\subdir.mk
--include libraries\ArduinoThread\subdir.mk
 -include libraries\AnalogMatrixKeypad\subdir.mk
 -include core\core\subdir.mk
 -include objects.mk

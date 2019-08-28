@@ -9,10 +9,16 @@
 #include "Waterpump.h"
 
 
-Waterpump::Waterpump(int analogPin) {
-	pinMode(analogPin, OUTPUT);
+Waterpump::Waterpump(byte pin) {
+	this->pin = pin;
+	pinMode(pin, OUTPUT);
 }
 
+void Waterpump::activate(int milliseconds) {
+	digitalWrite(pin, HIGH);
+	delay(milliseconds);
+	digitalWrite(pin, LOW);
+}
 
 
 

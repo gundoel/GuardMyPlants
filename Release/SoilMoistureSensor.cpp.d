@@ -10,7 +10,7 @@ SoilMoistureSensor.cpp.o: ..\SoilMoistureSensor.cpp \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/USBAPI.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h \
  C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\variants\standard/pins_arduino.h \
- ..\Sensor.h ..\SoilMoistureSensor.h ..\gmputil.h
+ ..\Sensor.h ..\SoilMoistureSensor.h
 
 C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\cores\arduino/Arduino.h:
 
@@ -37,5 +37,3 @@ C:\Users\TAARISI3\sloeber\arduinoPlugin\packages\arduino\hardware\avr\1.6.23\var
 ..\Sensor.h:
 
 ..\SoilMoistureSensor.h:
-
-..\gmputil.h:

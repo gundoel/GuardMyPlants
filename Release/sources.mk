@@ -37,7 +37,8 @@ SUBDIRS := \
 . \
 core\core \
 libraries\AnalogMatrixKeypad \
-libraries\ArduinoThread \
 libraries\HID\src \
 libraries\Keypad\src \
+libraries\LiquidCrystal\src \
+libraries\time \
 

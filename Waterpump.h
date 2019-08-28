@@ -9,10 +9,12 @@
 #define WATERPUMP_H_
 
 class Waterpump {
-	public:
-		Waterpump(int analogPin);
-		void activate(int milliseconds);
-};
+private:
+	byte pin;
 
+public:
+	Waterpump(byte pin);
+	void activate(int milliseconds);
+};
 
 #endif /* WATERPUMP_H_ */
