@@ -2,7 +2,7 @@
 //This is a automatic generated file
 //Please do not modify this file
 //If you touch this file your change will be overwritten during the next build
-//This file has been generated on 2019-08-28 21:39:00
+//This file has been generated on 2019-08-29 22:17:18
 
 #include "Arduino.h"
 #include <Arduino.h>
@@ -21,9 +21,9 @@ void setup() ;
 void showDefaultScreen() ;
 void showStateMessage(String message) ;
 byte getButton() ;
-char *rpad(char *dest, const char *str, char chr, unsigned char width) ;
-char *lpad(char *dest, const char *str, char chr, unsigned char width) ;
-char *padc(char chr, unsigned char count) ;
+char* rpad(char *dest, const char *str, char chr, unsigned char width) ;
+char* lpad(char *dest, const char *str, char chr, unsigned char width) ;
+char* padc(char chr, unsigned char count) ;
 String getPotSizeString(int potSize) ;
 String getMoistureString(int moisture) ;
 void togglePotSize(Potsize *potSizeVariable) ;

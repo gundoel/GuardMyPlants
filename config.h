@@ -24,7 +24,7 @@ const int PUMP_MILLILITERS_PER_SECOND = 100;
 // defines how many per cent of pot size are pumped into the pot in 1 cycle. e. g. pot = 500ml -> 50ml
 const int DEFAULT_PERCENTAGE_POT_SIZE = 10;
 // defines capacity of water tank in milliliters
-// TODO change to real value
+// TODO measure full tank and set value here
 const int WATER_TANK_CAPACITY = 1000;
 // defines a minimum for water level to prevent pumps from sucking in air an breaking
 const int MIN_WATER_LEVEL_PERCENT = 10;
@@ -55,13 +55,15 @@ const Moisture DEFAULT_MOISTURE = moisture_medium;
  * UI TEXTS
  **************************************************************************************************/
 // available pot sizes. sequence must correspond with enum Potsize
-const String POT_SIZE_STRING[] { "klein", "mittel", "gross" };
+const String POT_SIZE_STR[] { "klein", "mittel", "gross" };
 // minimal moisture in a pot (%). sequence must correspond with enum Needed_Moisture
-const String POT_MOISTURE_STRING[] { "leicht feucht", "mittelfeucht", "feucht" };
-const String PLANT_1_WATERED = "Pflanze 1 bewaessert.";
-const String PLANT_2_WATERED = "Pflanze 2 bewaessert.";
-const String PLANT_1_WATER_LOW = "Pflanze 1 konnte nicht bewaessert werden. Zu wenig Wasser.";
-const String PLANT_2_WATER_LOW = "Pflanze 2 konnte nicht bewaessert werden. Zu wenig Wasser.";
+const String POT_MOISTURE_STR[] { "leicht feucht", "mittelfeucht", "feucht" };
+const String PLANT_1_WATERED_STR = "Pflanze 1 bewaessert.";
+const String PLANT_2_WATERED_STR = "Pflanze 2 bewaessert.";
+const String PLANT_1_WATER_LOW_STR = "Pflanze 1 konnte nicht bewaessert werden. Zu wenig Wasser.";
+const String PLANT_2_WATER_LOW_STR = "Pflanze 2 konnte nicht bewaessert werden. Zu wenig Wasser.";
+const String LITER_STR = "Liter";
+
 /**************************************************************************************************
  * DISPLAY & MENU
  **************************************************************************************************/

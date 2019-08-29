@@ -31,13 +31,14 @@ LiquidCrystal lcd(LCD_PIN1, LCD_PIN2, LCD_PIN3, LCD_PIN4, LCD_PIN5, LCD_PIN6);
 AnalogMatrixKeypad keypad(ANALOG_KEYPAD_PIN);
 
 /* initialize sensors with interface pins defined in config.h
-Tested max return value of water level sensor is 320, not 1024 as mentioned in specs
+ * Tested max return value of water level sensor is 320, not 1024 as mentioned in specs.
+ * Tested min valuue is 40.
  */
-WaterLevelSensor waterLevelSensor(0, 320, WATER_LEVEL_SENSOR_PIN,
+WaterLevelSensor waterLevelSensor(30, 686, 20, WATER_LEVEL_SENSOR_PIN,
 		MIN_WATER_LEVEL_PERCENT);
-SoilMoistureSensor soilMoistureSensor1(0, 320, SOIL_MOISTURE_SENSOR_1_PIN,
+SoilMoistureSensor soilMoistureSensor1(0, 320, 20, SOIL_MOISTURE_SENSOR_1_PIN,
 		neededMoisture1Percent);
-SoilMoistureSensor soilMoistureSensor2(0, 320, SOIL_MOISTURE_SENSOR_2_PIN,
+SoilMoistureSensor soilMoistureSensor2(0, 320, 20, SOIL_MOISTURE_SENSOR_2_PIN,
 		neededMoisture2Percent);
 Waterpump waterpump1(WATERPUMP_1_PIN);
 Waterpump waterpump2(WATERPUMP_2_PIN);
@@ -76,12 +77,11 @@ void showDefaultScreen() {
 
 void showStateMessage(String message) {
 	//State messages always on 2nd line
-	lcd.setCursor(0,1);
+	lcd.setCursor(0, 1);
+	char buf[LCD_COLS];
 	// TODO scrolling for longer messages
-//	if(len(message) > LCD_COLS) {
-//		lcd.autoscroll()
-//	}
-	lcd.print(message);
+	message.toCharArray(buf, len(message + 1));
+	lcd.print(rpad(strbuf, buf));
 }
 
 // returns button either from Serial (only in debug mode) or keypad
@@ -103,7 +103,7 @@ byte getButton() {
 }
 
 // fills up char with right padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char *rpad(char *dest, const char *str, char chr, unsigned char width) {
+char* rpad(char *dest, const char *str, char chr, unsigned char width) {
 	unsigned char len = strlen(str);
 
 	width = width > LCD_COLS ? LCD_COLS : width;
@@ -118,7 +118,7 @@ char *rpad(char *dest, const char *str, char chr, unsigned char width) {
 }
 
 // fills up char with left padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char *lpad(char *dest, const char *str, char chr, unsigned char width) {
+char* lpad(char *dest, const char *str, char chr, unsigned char width) {
 	unsigned char len = strlen(str);
 
 	width = width > LCD_COLS ? LCD_COLS : width;
@@ -133,7 +133,7 @@ char *lpad(char *dest, const char *str, char chr, unsigned char width) {
 }
 
 // fills up char with padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char *padc(char chr, unsigned char count) {
+char* padc(char chr, unsigned char count) {
 	static char strbuf[LCD_COLS + 1];
 
 	count = (count > LCD_COLS) ? LCD_COLS : count;
@@ -151,13 +151,13 @@ char *padc(char chr, unsigned char count) {
 String getPotSizeString(int potSize) {
 	switch (potSize) {
 	case pot_size_small:
-		return POT_SIZE_STRING[0];
+		return POT_SIZE_STR[0];
 		break;
 	case pot_size_medium:
-		return POT_SIZE_STRING[1];
+		return POT_SIZE_STR[1];
 		break;
 	case pot_size_large:
-		return POT_SIZE_STRING[2];
+		return POT_SIZE_STR[2];
 		break;
 	default:
 		return "undefined";
@@ -169,13 +169,13 @@ String getPotSizeString(int potSize) {
 String getMoistureString(int moisture) {
 	switch (moisture) {
 	case moisture_low:
-		return POT_MOISTURE_STRING[0];
+		return POT_MOISTURE_STR[0];
 		break;
 	case moisture_medium:
-		return POT_MOISTURE_STRING[1];
+		return POT_MOISTURE_STR[1];
 		break;
 	case moisture_high:
-		return POT_MOISTURE_STRING[2];
+		return POT_MOISTURE_STR[2];
 		break;
 	default:
 		return "undefined";
@@ -215,7 +215,6 @@ byte toggleSelection(byte cmdId) {
 	byte complete = false;
 	// show selection on line 2 an leave out 1 character for arrow
 	lcd.setCursor(1, 1);
-	char buf[LCD_COLS];
 	String currentSelectionString;
 	Potsize *currentPotSelection;
 	Moisture *currentMoistureSelection;
@@ -258,29 +257,48 @@ byte toggleSelection(byte cmdId) {
 	}
 	}
 	// display selection
-	currentSelectionString.toCharArray(buf, len(currentSelectionString + 1));
-	lcd.print(rpad(strbuf, buf));
+	showStateMessage(currentSelectionString);
 	if (btn == BUTTON_BACK || btn == BUTTON_SELECT) {
 		complete = true;
 	}
 	return complete;
 }
 
+//TODO merge with toggleSelection (does mainly the same)
 //----------------------------------------------------------------------
 // Addition or removal of menu items in MenuData.h will require this method to be modified accordingly.
 byte processMenuCommand(byte cmdId) {
 	byte complete = false; // set to true when menu command processing complete.
 
-	if (btn == BUTTON_SELECT) {
-		complete = true;
-	}
+	String currentState;
 
 	//TODO Processing Logs, check Settings etc.
 	switch (cmdId) {
-	default:
+	case menuCommandWaterlevel: {
+		// cast to int, precision not needed and display is steady without storing historyValue
+		int waterLevelPercent = (int) waterLevelSensor.getPercentValue();
+		currentState = String(waterLevelPercent) + "%, "
+				+ String(multiplyPercent(WATER_TANK_CAPACITY, waterLevelPercent)/1000)
+				+ " " + LITER_STR;
 		break;
 	}
-
+	case menuCommandPot1Moisture: {
+		currentState = String(soilMoistureSensor1.getPercentValue()) + "%, ";
+		break;
+	}
+	case menuCommandPot2Moisture: {
+		currentState = String(soilMoistureSensor2.getPercentValue()) + "%, ";
+		break;
+	}
+	default: {
+		break;
+	}
+	}
+	showStateMessage(currentState);
+	DEBUG_PRINTLN(currentState);
+	if (btn == BUTTON_SELECT || btn == BUTTON_BACK) {
+		complete = true;
+	}
 	return complete;
 }
 
@@ -512,20 +530,18 @@ void loop() {
 			if (waterPlant(1)) {
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				showStateMessage(PLANT_1_WATERED);
-			}
-			else {
-				showStateMessage(PLANT_1_WATER_LOW);
+				showStateMessage(PLANT_1_WATERED_STR);
+			} else {
+				showStateMessage(PLANT_1_WATER_LOW_STR);
 			}
 		}
 		if (soilMoistureSensor2.getPercentValue() < neededMoisture2Percent) {
 			if (waterPlant(2)) {
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				showStateMessage(PLANT_2_WATERED);
-			}
-			else {
-				showStateMessage(PLANT_2_WATER_LOW);
+				showStateMessage(PLANT_2_WATERED_STR);
+			} else {
+				showStateMessage(PLANT_2_WATER_LOW_STR);
 			}
 		}
 	}

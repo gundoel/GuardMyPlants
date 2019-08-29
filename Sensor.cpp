@@ -12,30 +12,36 @@
 
 using namespace gmp_math_utils;
 
-Sensor::Sensor(int minValue, int maxValue, int analogPin, double thresholdValuePercent) :
-minValue(minValue), maxValue(maxValue), analogPin(analogPin), thresholdValuePercent(thresholdValuePercent)  {
-	pinMode(analogPin, INPUT);
+Sensor::Sensor(int minValue, int maxValue, int toleratedDeviation,
+		int pin, double thresholdValuePercent) :
+		minValue(minValue), maxValue(maxValue), toleratedDeviation(
+				toleratedDeviation), pin(pin), thresholdValuePercent(
+				thresholdValuePercent) {
+	pinMode(pin, INPUT);
 }
 
 double Sensor::getPercentValue() {
-	DEBUG_PRINTLN(analogRead(analogPin));
-	DEBUG_PRINTLN(calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
-	return (calculatePercentValue(minValue, maxValue, analogRead(analogPin)));
+	DEBUG_PRINTLN("Sensor value " + String(getStableValue()));
+	DEBUG_PRINTLN("Sensor % " + String(
+			map(getStableValue(), minValue, maxValue, 0, 100)));
+	return map(getStableValue(), minValue, maxValue, 0, 100);
 }
 
-int Sensor::getAnalogPin() const {
-	return analogPin;
+/* measured value needs to be stabilized using previous value and tolerated deviation
+ * values below 0 are ignored
+ */
+double Sensor::getStableValue() {
+	int currentValue = analogRead(pin);
+	if (((previousValue >= currentValue)
+			&& ((previousValue - currentValue) > toleratedDeviation))
+			|| ((previousValue < currentValue)
+					&& ((currentValue - previousValue) > toleratedDeviation))) {
+		previousValue = currentValue;
+	}
+	return previousValue;
 }
 
-int Sensor::getCurrentValue() const {
-	return currentValue;
-}
-
-void Sensor::setCurrentValue(int currentValue) {
-	this->currentValue = currentValue;
-}
-
-double Sensor::getThresholdValuePercent() const {
+double Sensor::getThresholdValuePercent() {
 	return thresholdValuePercent;
 }
 

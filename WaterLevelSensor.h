@@ -11,8 +11,8 @@
 
 class WaterLevelSensor: public Sensor {
 public:
-	WaterLevelSensor(int minValue, int maxValue, int analogPin, double thresholdValuePercent);
-	double getPercentValue();
+	WaterLevelSensor(int minValue, int maxValue, int toleratedDeviation,
+			int pin, double thresholdValuePercent);
 
 };
 

@@ -10,20 +10,19 @@
 
 class Sensor {
 protected:
-	int currentValue = 0; // Aktueller Messwert
+	int previousValue = 0;
+	int toleratedDeviation = 0;
 	int minValue; // Hoechster Wert, den der Sensor liefert.
 	int maxValue; // Tiefster Wert, den der Sensor liefert.
-	int analogPin; // Pin, an dem der Sensor angeschlossen ist
+	int pin; // Pin, an dem der Sensor angeschlossen ist
 	double thresholdValuePercent; //Schwellwert für Alarm/Aktion
 
 public:
-	Sensor(int minValue, int maxValue, int analogPin,
+	Sensor(int minValue, int maxValue, int toleratedDeviation, int pin,
 			double thresholdValuePercent);
 	double getPercentValue();
-	int getAnalogPin() const;
-	int getCurrentValue() const;
-	void setCurrentValue(int currentValue = 0);
-	double getThresholdValuePercent() const;
+	double getStableValue();
+	double getThresholdValuePercent();
 	void setThresholdValuePercent(double thresholdValuePercent);
 };
 

@@ -12,12 +12,13 @@
 #include <Arduino.h>
 
 namespace gmp_math_utils {
-inline double calculatePercentValue(int min = 0, int max = 100, int value = 0) {
-	return (double) value * 100 / (max - min);
-}
 
 inline double subtractPercent(double value, double percent) {
 	return (value - (value * percent));
+}
+
+inline double multiplyPercent(double value, double percent) {
+	return (value * percent / 100);
 }
 
 }
