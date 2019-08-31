@@ -36,9 +36,9 @@ AnalogMatrixKeypad keypad(ANALOG_KEYPAD_PIN);
  */
 WaterLevelSensor waterLevelSensor(30, 686, 20, WATER_LEVEL_SENSOR_PIN,
 		MIN_WATER_LEVEL_PERCENT);
-SoilMoistureSensor soilMoistureSensor1(0, 320, 20, SOIL_MOISTURE_SENSOR_1_PIN,
+SoilMoistureSensor soilMoistureSensor1(195, 1021, 20, SOIL_MOISTURE_SENSOR_1_PIN,
 		neededMoisture1Percent);
-SoilMoistureSensor soilMoistureSensor2(0, 320, 20, SOIL_MOISTURE_SENSOR_2_PIN,
+SoilMoistureSensor soilMoistureSensor2(195, 1021, 20, SOIL_MOISTURE_SENSOR_2_PIN,
 		neededMoisture2Percent);
 Waterpump waterpump1(WATERPUMP_1_PIN);
 Waterpump waterpump2(WATERPUMP_2_PIN);
