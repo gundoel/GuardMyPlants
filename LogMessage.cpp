@@ -13,3 +13,7 @@ LogMessage::LogMessage(String timestamp, String message) {
 	this->message = message;
 }
 
+String LogMessage::getMessage() {
+	return message;
+}
+

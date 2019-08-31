@@ -10,17 +10,21 @@
 
 #include <Arduino.h>
 #include "LogMessage.h"
+#include "config.h"
 
 class Log {
 public:
 	Log();
 
-	const void addMessage(LogMessage *message);
+	void addMessage(LogMessage *message);
 	const LogMessage getMessage(int index);
+	void printLogEntries();
+	int getLastStoredIndex();
 
 private:
-	LogMessage messages[100];
-	int count = 0;
+	//store the last 20 log messages
+	LogMessage messages[20];
+	int lastStoredIndex = 0;
 };
 
 #endif /* LOG_H_ */

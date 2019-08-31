@@ -18,6 +18,8 @@ private:
 
 public:
 	LogMessage(String timestamp, String message);
+	~LogMessage();
+	String getMessage();
 };
 
 #endif /* LOGMESSAGE_H_ */
