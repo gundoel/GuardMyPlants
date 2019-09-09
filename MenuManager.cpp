@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "MenuManager.h"
 #include <avr/pgmspace.h>
+
 #include "config.h"
 
 MenuManager::MenuManager(const MenuItem *root, unsigned char itemCount)
@@ -117,21 +118,6 @@ const unsigned char MenuManager::currentItemHasChildren()
   return pgm_read_byte(&(currentMenu[currentMenuItemIndexPos].childItemCount)) > 0;
 }
 
-// determines if menu is marked as a selection Menu
-const boolean MenuManager::currentItemHasSelection() {
-	boolean itemFound = false;
-	int i = 0;
-	while(!itemFound && i < sizeof(SELECTION_MENUS)) {
-		if(SELECTION_MENUS[i] == pgm_read_byte(&(currentMenu[currentMenuItemIndexPos].id))) {
-			itemFound = true;
-		}
-		i++;
-		//Serial.println(currentMenuItemIndexPos);
-	}
-	return itemFound;
-}
-
-
 // ---------------------------------------------------
 const unsigned char MenuManager::currentMenuHasParent()
 {
@@ -190,11 +176,6 @@ unsigned char MenuManager::handleNavigation(unsigned char (*getNavAction)(), voi
     {
       descendToChildMenu();
       refreshDisplay(REFRESH_DESCEND);
-    }
-    // handle menus with selection
-    else if (currentItemHasSelection()) {
-    	//DEBUG_PRINTLN("handleNavigation NavAction:" + String(action));
-    	menuMode = MENU_SELECTION;
     }
     else
     {

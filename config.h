@@ -1,5 +1,5 @@
 /*
- * config.h: Bestimmt die Grundeinstellungen wie Pinbelegung und Debug-Modus für Entwicklung
+ * config.h defines basic settings like pins, messages and debug mode
  *
  *  Created on: 14.08.2019
  *      Author: TAARISI3
@@ -13,14 +13,18 @@
 /**************************************************************************************************
  * DEVELOPMENT
  **************************************************************************************************/
-#define DEBUG // debug mode active, if not commented out
+// also consider changing preprocessor DEBUG in debug.h when changing this parameter
 const boolean SERIAL_CONTROL_ACTIVE = true; // allows control of GuardMyPlants over serial input if not commented out
 
 /**************************************************************************************************
  * PUMP & WATER TANK
  **************************************************************************************************/
+// todo pumpenklasse braucht eine bewaesserungsmethode, der nur die benoetigte menge
+// in ml uebergeben werden kann. foerdermenge und pwm interessieren GMP nicht, die
+// pumpenklasse muss das handeln
 // defines flow rate of pump in milliliters
 const int PUMP_MILLILITERS_PER_SECOND = 100;
+const int PUMP_PWM = 70;
 // defines how many per cent of pot size are pumped into the pot in 1 cycle. e. g. pot = 500ml -> 50ml
 const int DEFAULT_PERCENTAGE_POT_SIZE = 10;
 // defines capacity of water tank in milliliters
@@ -58,10 +62,9 @@ const Moisture DEFAULT_MOISTURE = moisture_medium;
 const String POT_SIZE_STR[] { "klein", "mittel", "gross" };
 // minimal moisture in a pot (%). sequence must correspond with enum Needed_Moisture
 const String POT_MOISTURE_STR[] { "leicht feucht", "mittelfeucht", "feucht" };
-const String PLANT_1_WATERED_STR = "Pflanze 1 bewaessert.";
-const String PLANT_2_WATERED_STR = "Pflanze 2 bewaessert.";
-const String PLANT_1_WATER_LOW_STR = "Pflanze 1 konnte nicht bewaessert werden. Zu wenig Wasser.";
-const String PLANT_2_WATER_LOW_STR = "Pflanze 2 konnte nicht bewaessert werden. Zu wenig Wasser.";
+const String POT_1_WATERED_STR = "Topf 1 bewaess.";
+const String POT_2_WATERED_STR = "Topf 2 bewaess.";
+const String WATER_LOW_STR = "Tank fuellen!";
 const String LITER_STR = "Liter";
 
 /**************************************************************************************************
@@ -71,12 +74,18 @@ const String LITER_STR = "Liter";
 #define LCD_COLS 16
 const char EMPTY_STR[] = ""; // Empty String for padding etc. used in menus
 enum {
-	LCD_PIN1 = 4,
-	LCD_PIN2 = 6,
-	LCD_PIN3 = 7,
-	LCD_PIN4 = 8,
-	LCD_PIN5 = 9,
-	LCD_PIN6 = 10
+//	LCD_PIN1 = 4,
+//	LCD_PIN2 = 6,
+//	LCD_PIN3 = 7,
+//	LCD_PIN4 = 8,
+//	LCD_PIN5 = 9,
+//	LCD_PIN6 = 10
+	LCD_PIN1 = 8,
+	LCD_PIN2 = 9,
+	LCD_PIN3 = 10,
+	LCD_PIN4 = 11,
+	LCD_PIN5 = 12,
+	LCD_PIN6 = 13
 };
 
 // defines which of the menus in MenuData.h are selection menus
@@ -88,20 +97,18 @@ const unsigned char SELECTION_MENUS[] {2, 3, 4, 5};
 /**************************************************************************************************
  * PINS
  **************************************************************************************************/
-
-//TODO Datentyp in uint8_t aendern, #define verwenden anstatt Konstanten
 const byte WATER_LEVEL_SENSOR_PIN = A0;
 const byte SOIL_MOISTURE_SENSOR_1_PIN = A1;
 const byte SOIL_MOISTURE_SENSOR_2_PIN = A2;
-const byte ANALOG_KEYPAD_PIN = A4;
+const byte ANALOG_KEYPAD_PIN = 4;
 
 // PWM Pins
 const byte WATERPUMP_1_PIN = 3;
 const byte WATERPUMP_2_PIN = 5;
 
-const byte RUN_LED_PIN = 11;
-const byte ERROR_LED_PIN = 12;
-const byte RUN_SWITCH_PIN = 13;
+const byte RUN_LED_PIN = 6;
+const byte ERROR_LED_PIN = 7;
+const byte RUN_SWITCH_PIN = 4;
 
 /**************************************************************************************************
  * BUTTONS
@@ -114,39 +121,5 @@ enum {
 	BUTTON_BACK = 13, //D
 	BUTTON_SELECT = 15 //#
 };
-
-//TODO remove?
-#define BUTTON_REPEAT_DELAY         800
-#define BUTTON_REPEAT_SPEED_DELAY   250
-
-/**************************************************************************************************
- * DEBUG
- **************************************************************************************************/
-
-#ifdef DEBUG
-#define DEBUG_PRINT(x) Serial.print(x)
-#define DEBUG_PRINTLN(x) Serial.println(x)
-#define DEBUG_GET_SERIAL_INPUT() getSerialInput()
-#else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINTLN(x)
-#define DEBUG_GET_SERIAL_INPUT()
-#endif
-
-/**************************************************************************************************
- * FUNCTION DECLARATIONS
- **************************************************************************************************/
-//TODO move
-// Convert integer to string. Doesn't really belong here, should be somewhere else.
-extern char *inttostr(char *dest, short integer);
-
-// Apply left padding to string.
-extern char *lpad(char *dest, const char *str, char chr = ' ',
-		unsigned char width = LCD_COLS);
-// Apply right padding to string.
-extern char *rpad(char *dest, const char *str, char chr = ' ',
-		unsigned char width = LCD_COLS);
-// Apply string concatenation. argc = number of string arguments to follow.
-extern char *fmt(char *dest, unsigned char argc, ...);
 
 #endif /* CONFIG_H_ */

@@ -30,7 +30,7 @@ void Log::printLogEntries() {
 	do {
 		if(messages[i].getMessage() != "") {
 			//TODO print to display
-			DEBUG_PRINTLN(messages[i].getMessage());
+			//DEBUG_PRINTLN(messages[i].getMessage());
 		}
 		i--;
 		if(i == -1) {
@@ -43,5 +43,4 @@ void Log::printLogEntries() {
 int Log::getLastStoredIndex() {
 	return lastStoredIndex;
 }
-
 

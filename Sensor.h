@@ -11,19 +11,16 @@
 class Sensor {
 protected:
 	int previousValue = 0;
+	int lowValue; /* low value of sensor (can be a higher absolute value than highValue,
+	e. g. moisture sensor returns high value for low moisture and vice versa */
+	int highValue; // highest value of sensor
 	int toleratedDeviation = 0;
-	int minValue; // Hoechster Wert, den der Sensor liefert.
-	int maxValue; // Tiefster Wert, den der Sensor liefert.
-	int pin; // Pin, an dem der Sensor angeschlossen ist
-	double thresholdValuePercent; //Schwellwert für Alarm/Aktion
+	byte pin; // pin where sensor is connected
 
 public:
-	Sensor(int minValue, int maxValue, int toleratedDeviation, int pin,
-			double thresholdValuePercent);
+	Sensor(int lowValue, int highValue, int toleratedDeviation, byte pin);
 	double getPercentValue();
 	double getStableValue();
-	double getThresholdValuePercent();
-	void setThresholdValuePercent(double thresholdValuePercent);
 };
 
 #endif /* SENSOR_H_ */

@@ -1,13 +1,14 @@
+#include "debug.h"
 #include <Arduino.h>
-#include <LiquidCrystal.h>
 #include <AnalogMatrixKeypad.h>
+#include <LiquidCrystal.h>
+#include "config.h"
 #include "MenuData.h"
 #include "Sensor.h"
 #include "SoilMoistureSensor.h"
 #include "WaterLevelSensor.h"
 #include "Waterpump.h"
 #include "Log.h"
-#include "config.h"
 #include "gmputil.hpp"
 
 using namespace gmp_keypad_utils;
@@ -21,47 +22,50 @@ Moisture neededMoisture1Percent = DEFAULT_MOISTURE;
 Moisture neededMoisture2Percent = DEFAULT_MOISTURE;
 
 int onOffSwitch = 0;
+int startRunTime = 0;
 boolean run = false;
+boolean error = false;
 char strbuf[LCD_COLS + 1]; // one line of lcd display
 
 // initialize lcd with interface pins defined in config.h
 LiquidCrystal lcd(LCD_PIN1, LCD_PIN2, LCD_PIN3, LCD_PIN4, LCD_PIN5, LCD_PIN6);
 
 // initialize keypad with interface pin defined in config.h
-AnalogMatrixKeypad keypad(ANALOG_KEYPAD_PIN);
+AnalogMatrixKeypad keypad(4);
+// TODO use setter to set thresholdvalue
+//keypad.setThresholdValue(10);
 
 /* initialize sensors with interface pins defined in config.h
  * Tested max return value of water level sensor is 320, not 1024 as mentioned in specs.
- * Tested min valuue is 40.
+ * Tested min value is 40.
  */
-WaterLevelSensor waterLevelSensor(30, 686, 20, WATER_LEVEL_SENSOR_PIN,
-		MIN_WATER_LEVEL_PERCENT);
-SoilMoistureSensor soilMoistureSensor1(195, 1021, 20, SOIL_MOISTURE_SENSOR_1_PIN,
-		neededMoisture1Percent);
-SoilMoistureSensor soilMoistureSensor2(195, 1021, 20, SOIL_MOISTURE_SENSOR_2_PIN,
-		neededMoisture2Percent);
+WaterLevelSensor waterLevelSensor(0, 336, 10, WATER_LEVEL_SENSOR_PIN);
+// soil moisture sensor return value high when moisture low
+SoilMoistureSensor soilMoistureSensor1(1015, 280, 10, SOIL_MOISTURE_SENSOR_1_PIN);
+SoilMoistureSensor soilMoistureSensor2(1015, 280, 10, SOIL_MOISTURE_SENSOR_2_PIN);
 Waterpump waterpump1(WATERPUMP_1_PIN);
 Waterpump waterpump2(WATERPUMP_2_PIN);
 
-void setup() {
-	Serial.begin(9600);
-	Serial.flush(); // Empty serial puffer
-	lcd.clear();
-	lcd.begin(LCD_COLS, LCD_ROWS); // set up the LCD's number of columns and rows:
-	showDefaultScreen();
-	pinMode(RUN_SWITCH_PIN, INPUT);
-	pinMode(ERROR_LED_PIN, OUTPUT);
-	pinMode(RUN_LED_PIN, OUTPUT);
-}
-
 /**************************************************************************************************
- * MENU SETUP AN FUNCTIONS
+ * MENU SETUP AND FUNCTIONS
  **************************************************************************************************/
 byte btn; // button
 
 enum AppModeValues {
-	APP_NORMAL_MODE, APP_MENU_MODE, APP_PROCESS_MENU_CMD, APP_TOGGLE_SELECTION
+	APP_NORMAL_MODE, APP_MENU_MODE, APP_PROCESS_MENU_CMD
 };
+
+// Convert integer to string. Doesn't really belong here, should be somewhere else.
+extern char *inttostr(char *dest, short integer);
+
+// Apply left padding to string.
+extern char *lpad(char *dest, const char *str, char chr = ' ',
+		unsigned char width = LCD_COLS);
+// Apply right padding to string.
+extern char *rpad(char *dest, const char *str, char chr = ' ',
+		unsigned char width = LCD_COLS);
+// Apply string concatenation. argc = number of string arguments to follow.
+extern char *fmt(char *dest, unsigned char argc, ...);
 
 //TODO move functions to some header
 void refreshMenuDisplay(byte refreshMode);
@@ -72,16 +76,17 @@ MenuManager Menu1(GMPMenu_Root, menuCount(GMPMenu_Root));
 
 //TODO move functions to some header file
 void showDefaultScreen() {
+	lcd.clear();
 	lcd.print(DEFAULT_SCREEN);
 }
 
-void showStateMessage(String message) {
-	//State messages always on 2nd line
-	lcd.setCursor(0, 1);
+void showStringMessage(String message, int line, int offset) {
+	lcd.setCursor(offset, line);
 	char buf[LCD_COLS];
 	// TODO scrolling for longer messages
-	message.toCharArray(buf, len(message + 1));
+	message.toCharArray(buf, len(message) + 1);
 	lcd.print(rpad(strbuf, buf));
+	lcd.print(message);
 }
 
 // returns button either from Serial (only in debug mode) or keypad
@@ -97,13 +102,17 @@ byte getButton() {
 			button = mapASCIICodeToValue(input);
 		}
 	} else if (!SERIAL_CONTROL_ACTIVE) {
-		button = keypad.readKey();
+		byte tmpButton = keypad.readKey();
+		// 255 = undefined return of mapASCIICodeToValue
+		if (tmpButton != KEY_NOT_PRESSED) {
+			button = mapASCIICodeToValue(tmpButton);
+		}
 	}
 	return button;
 }
 
 // fills up char with right padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char* rpad(char *dest, const char *str, char chr, unsigned char width) {
+char *rpad(char *dest, const char *str, char chr, unsigned char width) {
 	unsigned char len = strlen(str);
 
 	width = width > LCD_COLS ? LCD_COLS : width;
@@ -118,7 +127,7 @@ char* rpad(char *dest, const char *str, char chr, unsigned char width) {
 }
 
 // fills up char with left padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char* lpad(char *dest, const char *str, char chr, unsigned char width) {
+char *lpad(char *dest, const char *str, char chr, unsigned char width) {
 	unsigned char len = strlen(str);
 
 	width = width > LCD_COLS ? LCD_COLS : width;
@@ -133,7 +142,7 @@ char* lpad(char *dest, const char *str, char chr, unsigned char width) {
 }
 
 // fills up char with padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char* padc(char chr, unsigned char count) {
+char *padc(char chr, unsigned char count) {
 	static char strbuf[LCD_COLS + 1];
 
 	count = (count > LCD_COLS) ? LCD_COLS : count;
@@ -148,7 +157,7 @@ char* padc(char chr, unsigned char count) {
 }
 
 // Returns pot size (small, medium etc.) as String
-String getPotSizeString(int potSize) {
+String getPotSizeString(Potsize potSize) {
 	switch (potSize) {
 	case pot_size_small:
 		return POT_SIZE_STR[0];
@@ -166,7 +175,7 @@ String getPotSizeString(int potSize) {
 }
 
 // Returns moisture (low, medium etc.) as String
-String getMoistureString(int moisture) {
+String getMoistureString(Moisture moisture) {
 	switch (moisture) {
 	case moisture_low:
 		return POT_MOISTURE_STR[0];
@@ -209,19 +218,45 @@ void toggleMoisture(Moisture *moistureVariable) {
 	}
 }
 
+
 //TODO cases need to be more generic. same things are done multiple times
-// Toggles selection items
-byte toggleSelection(byte cmdId) {
-	byte complete = false;
-	// show selection on line 2 an leave out 1 character for arrow
-	lcd.setCursor(1, 1);
-	String currentSelectionString;
+//----------------------------------------------------------------------
+// Addition or removal of menu items in MenuData.h will require this method to be modified accordingly.
+byte processMenuCommand(byte cmdId) {
+	byte complete = false; // set to true when menu command processing complete.
+	//TODO Processing Logs, check Settings etc.
+	String currentStateMessage;
 	Potsize *currentPotSelection;
 	Moisture *currentMoistureSelection;
 	switch (cmdId) {
+	case menuCommandWaterlevel: {
+		int waterLevelPercent = (int) waterLevelSensor.getPercentValue();
+		currentStateMessage = String(waterLevelPercent) + "% "
+				+ String(multiplyPercent(WATER_TANK_CAPACITY, waterLevelPercent)/ 1000) +
+				" " + LITER_STR;
+		break;
+	}
+	case menuCommandPot1Moisture: {
+		currentStateMessage = String(soilMoistureSensor1.getPercentValue())	+ "%, ";
+		break;
+	}
+	case menuCommandPot2Moisture: {
+		currentStateMessage = String(soilMoistureSensor2.getPercentValue())	+ "%, ";
+		break;
+	}
+	case menuCommandPot1Pump: {
+		waterpump1.watering(200);
+		complete = true;
+		break;
+	}
+	case menuCommandPot2Pump: {
+		waterpump2.watering(200);
+		complete = true;
+		break;
+	}
 	case menuCommandPot1Size_Selection: {
 		currentPotSelection = &potSize1;
-		currentSelectionString = getPotSizeString(*currentPotSelection);
+		currentStateMessage = getPotSizeString(*currentPotSelection);
 		// toggle selection when button right pressed
 		if (btn == BUTTON_RIGHT) {
 			togglePotSize(currentPotSelection);
@@ -230,7 +265,7 @@ byte toggleSelection(byte cmdId) {
 	}
 	case menuCommandPot2Size_Selection: {
 		currentPotSelection = &potSize2;
-		currentSelectionString = getPotSizeString(*currentPotSelection);
+		currentStateMessage = getPotSizeString(*currentPotSelection);
 		// toggle selection when button right pressed
 		if (btn == BUTTON_RIGHT) {
 			togglePotSize(currentPotSelection);
@@ -239,7 +274,7 @@ byte toggleSelection(byte cmdId) {
 	}
 	case menuCommandPot1Moisture_Selection: {
 		currentMoistureSelection = &neededMoisture1Percent;
-		currentSelectionString = getMoistureString(*currentMoistureSelection);
+		currentStateMessage = getMoistureString(*currentMoistureSelection);
 		// toggle selection when button right pressed
 		if (btn == BUTTON_RIGHT) {
 			toggleMoisture(currentMoistureSelection);
@@ -248,54 +283,19 @@ byte toggleSelection(byte cmdId) {
 	}
 	case menuCommandPot2Moisture_Selection: {
 		currentMoistureSelection = &neededMoisture2Percent;
-		currentSelectionString = getMoistureString(*currentMoistureSelection);
+		currentStateMessage = getMoistureString(*currentMoistureSelection);
 		// toggle selection when button right pressed
 		if (btn == BUTTON_RIGHT) {
 			toggleMoisture(currentMoistureSelection);
 		}
 		break;
 	}
-	}
-	// display selection
-	showStateMessage(currentSelectionString);
-	if (btn == BUTTON_BACK || btn == BUTTON_SELECT) {
-		complete = true;
-	}
-	return complete;
-}
-
-//TODO merge with toggleSelection (does mainly the same)
-//----------------------------------------------------------------------
-// Addition or removal of menu items in MenuData.h will require this method to be modified accordingly.
-byte processMenuCommand(byte cmdId) {
-	byte complete = false; // set to true when menu command processing complete.
-
-	String currentState;
-
-	//TODO Processing Logs, check Settings etc.
-	switch (cmdId) {
-	case menuCommandWaterlevel: {
-		// cast to int, precision not needed and display is steady without storing historyValue
-		int waterLevelPercent = (int) waterLevelSensor.getPercentValue();
-		currentState = String(waterLevelPercent) + "%, "
-				+ String(multiplyPercent(WATER_TANK_CAPACITY, waterLevelPercent)/1000)
-				+ " " + LITER_STR;
-		break;
-	}
-	case menuCommandPot1Moisture: {
-		currentState = String(soilMoistureSensor1.getPercentValue()) + "%, ";
-		break;
-	}
-	case menuCommandPot2Moisture: {
-		currentState = String(soilMoistureSensor2.getPercentValue()) + "%, ";
-		break;
-	}
 	default: {
 		break;
 	}
 	}
-	showStateMessage(currentState);
-	DEBUG_PRINTLN(currentState);
+	// display selection
+	showStringMessage(currentStateMessage, 1, 1);
 	if (btn == BUTTON_SELECT || btn == BUTTON_BACK) {
 		complete = true;
 	}
@@ -307,9 +307,6 @@ byte processMenuCommand(byte cmdId) {
 byte getNavAction() {
 	byte navAction = 0;
 	byte currentItemHasChildren = Menu1.currentItemHasChildren();
-	// current item never has selection if it has children
-	byte currentItemHasSelection =
-			(currentItemHasChildren) ? false : Menu1.currentItemHasSelection();
 	if (btn == BUTTON_UP)
 		navAction = MENU_ITEM_PREV;
 	else if (btn == BUTTON_DOWN)
@@ -317,8 +314,6 @@ byte getNavAction() {
 	else if (btn == BUTTON_SELECT
 			|| (btn == BUTTON_RIGHT && currentItemHasChildren))
 		navAction = MENU_ITEM_SELECT;
-	else if (btn == BUTTON_RIGHT && currentItemHasSelection)
-		navAction = MENU_TOGGLE_SELECTION;
 	else if (btn == BUTTON_BACK)
 		navAction = MENU_BACK;
 	return navAction;
@@ -327,38 +322,6 @@ byte getNavAction() {
 // Callback to refresh display during menu navigation, using parameter of type enum DisplayRefreshMode.
 void refreshMenuDisplay(byte refreshMode) {
 	char nameBuf[LCD_COLS + 1];
-
-	/*
-	 if (refreshMode == REFRESH_DESCEND || refreshMode == REFRESH_ASCEND)
-	 {
-	 byte menuCount = Menu1.getMenuItemCount();
-
-	 // uncomment below code to output menus to serial monitor
-	 if (Menu1.currentMenuHasParent())
-	 {
-	 Serial.print("Parent menu: ");
-	 Serial.println(Menu1.getParentItemName(nameBuf));
-	 }
-	 else
-	 {
-	 Serial.println("Main menu:");
-	 }
-
-	 for (int i=0; i<menuCount; i++)
-	 {
-	 Serial.print(Menu1.getItemName(nameBuf, i));
-
-	 if (Menu1.itemHasChildren(i))
-	 {
-	 Serial.println("->");
-	 }
-	 else
-	 {
-	 Serial.println();
-	 }
-	 }
-	 }
-	 */
 
 	lcd.setCursor(0, 0);
 	if (Menu1.currentItemHasChildren()) {
@@ -374,13 +337,16 @@ void refreshMenuDisplay(byte refreshMode) {
 		if ((cmdId = Menu1.getCurrentItemCmdId()) == 0) {
 			strbuf[LCD_COLS - 1] = 0b01111111; // Display back arrow if this menu item ascends to parent.
 			lcd.print(strbuf);
-			lcd.setCursor(0, 1);
-			lcd.print(rpad(strbuf, EMPTY_STR)); // Clear config value in display.
+			// clear 2nd line
+			showStringMessage(EMPTY_STR, 1, 0);
+//			lcd.setCursor(0, 1);
+//			lcd.print(rpad(strbuf, EMPTY_STR)); // Clear config value in display.
 		} else {
 			lcd.print(strbuf);
 			lcd.setCursor(0, 1);
 			lcd.print(" ");
-			lcd.print(rpad(strbuf, EMPTY_STR)); // Clear config value in display.
+			// clear 2nd line
+			showStringMessage(EMPTY_STR, 1, 0);
 		}
 	}
 }
@@ -405,31 +371,51 @@ int getPotSizeMililiters(Potsize potSize) {
 	}
 }
 
-double getPumpTimeMilliSeconds(int neededWaterMilliliters) {
-	return (neededWaterMilliliters / PUMP_MILLILITERS_PER_SECOND);
-}
-
-// activates the pump for the calculated amount of seconds
-boolean waterPlant(int pot) {
-	//TODO not really beautiful
+int getNeededWaterMilliliters(int pot) {
 	Potsize potSize = (pot == 1) ? potSize1 : potSize2;
 	// calculate needed water with percentage defined in config.h
-	int neededWaterMilliliters = getPotSizeMililiters(potSize)
-			/ DEFAULT_PERCENTAGE_POT_SIZE;
+	return (getPotSizeMililiters(potSize) / DEFAULT_PERCENTAGE_POT_SIZE);
+}
+
+// activates the pump for to pump given amount of water into pot
+boolean isWaterOK(int neededWaterMilliliters) {
 	// check if enough water is in water tank
 	if (neededWaterMilliliters
-			>= (subtractPercent(WATER_TANK_CAPACITY,
-					waterLevelSensor.getThresholdValuePercent()))) {
-		if (pot == 1) {
-			waterpump1.activate(
-					getPumpTimeMilliSeconds(neededWaterMilliliters));
-		} else if (pot == 2) {
-			waterpump2.activate(neededWaterMilliliters);
-		}
+			<= (subtractPercent(WATER_TANK_CAPACITY, MIN_WATER_LEVEL_PERCENT))) {
 		return true;
 	} else {
 		return false;
 	}
+}
+
+void switchToRunMode() {
+	error = false;
+	run = true;
+	digitalWrite(ERROR_LED_PIN, LOW);
+	digitalWrite(RUN_LED_PIN, HIGH);
+	//clean up message row
+	showStringMessage(EMPTY_STR, 1, 0);
+	delay(1000);
+}
+
+void switchToErrorMode(String errorMessage) {
+	error = true;
+	run = false;
+	digitalWrite(ERROR_LED_PIN, HIGH);
+	digitalWrite(RUN_LED_PIN, LOW);
+	showStringMessage(errorMessage, 1, 0);
+	delay(1000);
+}
+
+void setup() {
+	Serial.begin(9600);
+	Serial.flush(); // Empty serial puffer
+	lcd.clear();
+	lcd.begin(LCD_COLS, LCD_ROWS); // set up the LCD's number of columns and rows:
+	showDefaultScreen();
+	pinMode(RUN_SWITCH_PIN, INPUT);
+	pinMode(ERROR_LED_PIN, OUTPUT);
+	pinMode(RUN_LED_PIN, OUTPUT);
 }
 
 void loop() {
@@ -437,9 +423,6 @@ void loop() {
 	 * MENU EXECUTION
 	 **************************************************************************************************/
 	btn = getButton();
-	if (btn != 255) {
-		DEBUG_PRINTLN("Button: " + String(btn));
-	}
 	switch (appMode) {
 	case APP_NORMAL_MODE:
 		if (btn == BUTTON_SELECT) {
@@ -455,17 +438,11 @@ void loop() {
 				refreshMenuDisplay);
 
 		if (menuMode == MENU_EXIT) {
-			DEBUG_PRINTLN("Menumode MENU_EXIT");
 			// Clean up Display and show default screen
-			lcd.clear();
 			showDefaultScreen();
 			appMode = APP_NORMAL_MODE;
-		} else if (menuMode == MENU_SELECTION) {
-			DEBUG_PRINTLN("Selection mode");
-			appMode = APP_TOGGLE_SELECTION;
 		} else if (menuMode == MENU_INVOKE_ITEM) {
 			appMode = APP_PROCESS_MENU_CMD;
-			Serial.print("Invoke");
 			// Indicate selected item.
 			lcd.setCursor(0, 1);
 			strbuf[0] = 0b01111110; // forward arrow representing input prompt.
@@ -474,34 +451,15 @@ void loop() {
 		}
 		break;
 	}
-	case APP_TOGGLE_SELECTION: {
-		byte togglingComplete = toggleSelection(Menu1.getCurrentItemCmdId());
-// Indicate selected item.
-		lcd.setCursor(0, 1);
-		strbuf[0] = 0b01111110; // forward arrow representing input prompt.
-		strbuf[1] = 0;
-		lcd.print(strbuf);
-		if (togglingComplete) {
-			appMode = APP_MENU_MODE;
-			// clear forward arrow
-			lcd.setCursor(0, 1);
-			strbuf[0] = ' '; // clear forward arrow
-			strbuf[1] = 0;
-			lcd.print(strbuf);
-		}
-		break;
-	}
+
 	case APP_PROCESS_MENU_CMD: {
 		byte processingComplete = processMenuCommand(
 				Menu1.getCurrentItemCmdId());
 
 		if (processingComplete) {
 			appMode = APP_MENU_MODE;
-			// clear forward arrow
-			lcd.setCursor(0, 1);
-			strbuf[0] = ' '; // clear forward arrow
-			strbuf[1] = 0;
-			lcd.print(strbuf);
+			// clear 2nd line
+			showStringMessage(EMPTY_STR, 1, 0);
 		}
 		break;
 	}
@@ -513,35 +471,41 @@ void loop() {
 	if (onOffSwitch == HIGH)
 // Switch from ON to OFF and vice versa
 	{
-		delay(50); // Debounce
 		if (!run) {
-			run = true;
-			digitalWrite(RUN_LED_PIN, HIGH);
-
+			switchToRunMode();
+			// store start time for logging since we do not have a time server
+			startRunTime = millis();
 		} else {
 			run = false;
 			digitalWrite(RUN_LED_PIN, LOW);
 		}
 	}
-// check if GuardMyPlants is switched ON
-	//TODO Threads?
-	if (run) {
-		if (soilMoistureSensor1.getPercentValue() < neededMoisture1Percent) {
-			if (waterPlant(1)) {
+	if (appMode == APP_NORMAL_MODE && !error) {
+		int neededWaterMilliliters;
+		if (run && soilMoistureSensor1.getPercentValue() < neededMoisture1Percent) {
+			neededWaterMilliliters = getNeededWaterMilliliters(1);
+			if (isWaterOK(neededWaterMilliliters)) {
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				showStateMessage(PLANT_1_WATERED_STR);
+				waterpump1.watering(neededWaterMilliliters);
+				showStringMessage(POT_1_WATERED_STR, 1, 0);
 			} else {
-				showStateMessage(PLANT_1_WATER_LOW_STR);
+				/* shutdown, even though there could be enough water for
+				 * multiple cycles with plant 2 (smaller pot): plant 1 would die
+				 * unnoticed otherwise */
+				switchToErrorMode(WATER_LOW_STR);
 			}
 		}
-		if (soilMoistureSensor2.getPercentValue() < neededMoisture2Percent) {
-			if (waterPlant(2)) {
+		if (run && soilMoistureSensor2.getPercentValue() < neededMoisture2Percent) {
+			neededWaterMilliliters = getNeededWaterMilliliters(2);
+			if (isWaterOK(neededWaterMilliliters)) {
+				waterpump2.watering(neededWaterMilliliters);
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				showStateMessage(PLANT_2_WATERED_STR);
+				showStringMessage(POT_2_WATERED_STR, 1, 0);
+				DEBUG_PRINTLN(String(POT_2_WATERED_STR));
 			} else {
-				showStateMessage(PLANT_2_WATER_LOW_STR);
+				switchToErrorMode(WATER_LOW_STR);
 			}
 		}
 	}

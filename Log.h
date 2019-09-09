@@ -10,11 +10,11 @@
 
 #include <Arduino.h>
 #include "LogMessage.h"
-#include "config.h"
+#include "debug.h"
 
 class Log {
 public:
-	Log();
+//	Log();
 
 	void addMessage(LogMessage *message);
 	const LogMessage getMessage(int index);

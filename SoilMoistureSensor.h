@@ -12,7 +12,7 @@
 
 class SoilMoistureSensor: public Sensor {
 public:
-	SoilMoistureSensor(int minValue, int maxValue, int toleratedDeviation, int pin, double thresholdValuePercent);
+	SoilMoistureSensor(int lowValue, int highValue, int toleratedDeviation, byte pin);
 };
 
 #endif /* SOILMOISTURESENSOR_H_ */
