@@ -1,6 +1,6 @@
 #include "debug.h"
 #include <Arduino.h>
-#include <AnalogMatrixKeypad.h>
+#include <IRremote.h>
 #include <LiquidCrystal.h>
 #include <Timer.h>
 #include "config.h"
@@ -12,7 +12,6 @@
 #include "Log.h"
 #include "gmputil.hpp"
 
-using namespace gmp_keypad_utils;
 using namespace gmp_string_utils;
 using namespace gmp_math_utils;
 
@@ -31,24 +30,89 @@ boolean run = false;
 boolean error = false;
 char strbuf[LCD_COLS + 1]; // one line of lcd display
 
+// IR receiver
+IRrecv irrecv(IR_RECEIVER_PIN);
+decode_results results;
+unsigned long lastInputRead = 0;
+
 // initialize lcd with interface pins defined in config.h
 LiquidCrystal lcd(LCD_PIN1, LCD_PIN2, LCD_PIN3, LCD_PIN4, LCD_PIN5, LCD_PIN6);
-
-// initialize keypad with interface pin defined in config.h
-AnalogMatrixKeypad keypad(4);
-// TODO use setter to set thresholdvalue
-//keypad.setThresholdValue(10);
 
 /* initialize sensors with interface pins defined in config.h
  * Tested max return value of water level sensor is 320, not 1024 as mentioned in specs.
  * Tested min value is 40.
  */
-WaterLevelSensor waterLevelSensor(0, 336, 10, WATER_LEVEL_SENSOR_PIN);
+WaterLevelSensor waterLevelSensor(0, 336, 10, WATER_LEVEL_SENSOR_PIN, 1);
 // soil moisture sensor return value high when moisture low
-SoilMoistureSensor soilMoistureSensor1(1015, 280, 10, SOIL_MOISTURE_SENSOR_1_PIN);
-SoilMoistureSensor soilMoistureSensor2(1015, 280, 10, SOIL_MOISTURE_SENSOR_2_PIN);
-Waterpump waterpump1(WATERPUMP_1_PIN);
-Waterpump waterpump2(WATERPUMP_2_PIN);
+SoilMoistureSensor soilMoistureSensor1(1015, 280, 10, SOIL_MOISTURE_SENSOR_1_PIN, 1);
+SoilMoistureSensor soilMoistureSensor2(1015, 280, 10, SOIL_MOISTURE_SENSOR_2_PIN, 2);
+Waterpump waterpump1(WATERPUMP_1_PIN, 1);
+Waterpump waterpump2(WATERPUMP_2_PIN, 2);
+
+// map hex key for IR receiver
+byte mapHexCodeToKey(unsigned long hexCode) {
+	switch (hexCode) {
+	case 0x511DBB: // VOL+
+		return BUTTON_UP;
+	case 0xE5CFBD7F: // UP
+		return BUTTON_UP;
+	case 0x52A3D41F: // FAST BACK
+		return BUTTON_BACK;
+	case 0xD7E84B1B: // PLAY/PAUSE
+		return BUTTON_SELECT;
+	case 0x20FE4DBB: // FAST FORWARD
+		return BUTTON_RIGHT;
+	case 0xA3C8EDDB: // Vol-
+		return BUTTON_DOWN;
+	case 0xF076C13B: // DOWN
+		return BUTTON_DOWN;
+	case 0xE318261B: // POWER
+		return BUTTON_POWER;
+	case 0xFFFFFFFF:
+		return BUTTON_REPEAT;
+	default:
+		return BUTTON_UNUSED;
+	}
+}
+
+//returns true if debounce time is exceeded in order to debounce key reading without delay
+boolean isKeyDebounced() {
+	if((millis() - DEBOUNCE_TIME) > lastInputRead) {
+		lastInputRead = millis();
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+// map ascii code for serial input
+byte mapASCIICodeToKey(byte asciiCode) {
+	switch (asciiCode) {
+	case 87:
+		return BUTTON_UP; // W = BUTTON_UP
+	case 88:
+		return BUTTON_DOWN; // X = BUTTON_DOWN
+	case 68:
+		return BUTTON_RIGHT; // D = BUTTON_RIGHT
+	case 65:
+		return BUTTON_BACK; // A = BUTTON_BACK
+	case 83:
+		return BUTTON_SELECT; // S = BUTTON_SELECT
+	case 119:
+		return BUTTON_UP; // W = BUTTON_UP
+	case 120:
+		return BUTTON_DOWN; // X = BUTTON_DOWN
+	case 100:
+		return BUTTON_RIGHT; // D = BUTTON_RIGHT
+	case 97:
+		return BUTTON_BACK; // A = BUTTON_BACK
+	case 115:
+		return BUTTON_SELECT; // S = BUTTON_SELECT
+	default:
+		return BUTTON_UNUSED;
+	}
+}
 
 /**************************************************************************************************
  * MENU SETUP AND FUNCTIONS
@@ -95,22 +159,29 @@ void showStringMessage(String message, int line, int offset) {
 
 // returns button either from Serial (only in debug mode) or keypad
 byte getButton() {
-	byte button = 255;
-	byte input;
+	byte button;
+	unsigned long input;
 	// for development, when no keypad is connected to arduino
+	// no debouncing needed
 	if (SERIAL_CONTROL_ACTIVE && Serial.available() > 0) {
 		input = Serial.read();
 		// Carriage return
 		if (input != '\r') {
 			DEBUG_PRINTLN("Input: " + String(input));
-			button = mapASCIICodeToValue(input);
+			button = mapASCIICodeToKey(input);
 		}
-	} else if (!SERIAL_CONTROL_ACTIVE) {
-		byte tmpButton = keypad.readKey();
-		// 255 = undefined return of mapASCIICodeToValue
-		if (tmpButton != KEY_NOT_PRESSED) {
-			button = mapASCIICodeToValue(tmpButton);
+	}
+	// debouncing is huge with IR receiver
+	else if (!SERIAL_CONTROL_ACTIVE && irrecv.decode(&results) && isKeyDebounced()) {
+		input = results.value;
+		int tmpButton = mapHexCodeToKey(input);
+		irrecv.resume();
+		if (tmpButton != BUTTON_REPEAT) {
+			button = tmpButton;
 		}
+	}
+	else {
+		button = BUTTON_REPEAT;
 	}
 	return button;
 }
@@ -403,19 +474,19 @@ int getNeededWaterMilliliters(int pot) {
 /* returns watering time in milli seconds depending on on
 requested quantity, the duty cycle is adapted in order to avoid overflow*/
 void watering(int pump, int neededMilliliters) {
-	unsigned long int wateringTimeMilliseconds;
+	unsigned long wateringTimeMilliseconds;
 	int dutyCycle;
 	if (neededMilliliters > 0 && neededMilliliters <= 20) {
 		dutyCycle = DUTY_CYCLE_SMALL;
-		wateringTimeMilliseconds = ((unsigned long int) (neededMilliliters / PUMP_CAPACITY_SMALL) * 1000);
+		wateringTimeMilliseconds = ((unsigned long) (neededMilliliters / PUMP_CAPACITY_SMALL) * 1000);
 	}
 	else if (neededMilliliters <= 60) {
 		dutyCycle = DUTY_CYCLE_MEDIUM;
-		wateringTimeMilliseconds = ((unsigned long int) (neededMilliliters / PUMP_CAPACITY_MEDIUM) * 1000);
+		wateringTimeMilliseconds = ((unsigned long) (neededMilliliters / PUMP_CAPACITY_MEDIUM) * 1000);
 	}
 	else if (neededMilliliters > 60) {
 		dutyCycle = DUTY_CYCLE_LARGE;
-		wateringTimeMilliseconds = ((unsigned long int) (neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
+		wateringTimeMilliseconds = ((unsigned long) (neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
 	}
 	//TODO ugly
 	if(wateringTimeMilliseconds > 0 && pump == 1) {
@@ -487,6 +558,8 @@ void setup() {
 	pinMode(RUN_SWITCH_PIN, INPUT);
 	pinMode(ERROR_LED_PIN, OUTPUT);
 	pinMode(RUN_LED_PIN, OUTPUT);
+	// enable IR receiver
+	irrecv.enableIRIn();
 }
 
 void loop() {
@@ -554,11 +627,13 @@ void loop() {
 	}
 	if (appMode == APP_NORMAL_MODE && !error) {
 		int neededWaterMilliliters;
-		Serial.println("Run: " + String(run));
-		Serial.println("Needed water: " + String(getNeededWaterMilliliters(1)));
-		Serial.println("Water ok: " + String(isWaterOK(getNeededWaterMilliliters(1))));
-		Serial.println("Needed Moist. 1: " + String(getNeededMoisture(neededMoisture1Percent)));
-		Serial.println("Moist. 1: " + String(soilMoistureSensor1.getPercentValue()));
+//		Serial.println("-------------------");
+//		Serial.println("Run: " + String(run));
+//		Serial.println("Needed water: " + String(getNeededWaterMilliliters(1)));
+//		Serial.println("Water ok: " + String(isWaterOK(getNeededWaterMilliliters(1))));
+//		Serial.println("Water level: " + String(waterLevelSensor.getPercentValue()));
+//		Serial.println("Needed Moist. 1: " + String(getNeededMoisture(neededMoisture1Percent)));
+//		Serial.println("Moist. 1: " + String(soilMoistureSensor1.getPercentValue()));
 		if (run && soilMoistureSensor1.getPercentValue() < getNeededMoisture(neededMoisture1Percent)) {
 			Serial.print("Running");
 			neededWaterMilliliters = getNeededWaterMilliliters(1);
@@ -566,10 +641,10 @@ void loop() {
 				watering(1, neededWaterMilliliters);
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				if (waterpump2.getIsPumpRunning()) {
-					showStringMessage(POT_1_WATERING_STR, 1, 0);
+				if (waterpump1.getIsPumpRunning()) {
+					showStringMessage(WATERING_STR, 1, 0);
 				}
-				DEBUG_PRINTLN(String(POT_1_WATERING_STR));
+				DEBUG_PRINTLN(String(WATERING_STR));
 			} else {
 				/* shutdown, even though there could be enough water for
 				 * multiple cycles with plant 2 (smaller pot): plant 1 would die
@@ -584,9 +659,9 @@ void loop() {
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
 				if (waterpump2.getIsPumpRunning()) {
-					showStringMessage(POT_2_WATERING_STR, 1, 0);
+					showStringMessage(WATERING_STR, 1, 0);
 				}
-				DEBUG_PRINTLN(String(POT_2_WATERING_STR));
+				DEBUG_PRINTLN(String(WATERING_STR));
 			} else {
 				switchToErrorMode(WATER_LOW_STR);
 			}

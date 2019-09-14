@@ -12,7 +12,7 @@
 class WaterLevelSensor: public Sensor {
 public:
 	WaterLevelSensor(int lowValue, int highValue, int toleratedDeviation,
-			byte pin);
+			byte pin, int id);
 };
 
 #endif /* WATERLEVELSENSOR_H_ */

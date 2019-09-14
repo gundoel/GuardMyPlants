@@ -14,7 +14,7 @@
  * DEVELOPMENT
  **************************************************************************************************/
 // also consider changing preprocessor DEBUG in debug.h when changing this parameter
-const boolean SERIAL_CONTROL_ACTIVE = true; // allows control of GuardMyPlants over serial input if not commented out
+const boolean SERIAL_CONTROL_ACTIVE = false; // allows control of GuardMyPlants over serial input if not commented out
 
 /**************************************************************************************************
  * PUMP & WATER TANK
@@ -67,8 +67,7 @@ const Moisture DEFAULT_MOISTURE = moisture_medium;
 const String POT_SIZE_STR[] { "klein", "mittel", "gross" };
 // minimal moisture in a pot (%). sequence must correspond with enum Needed_Moisture
 const String POT_MOISTURE_STR[] { "leicht feucht", "mittelfeucht", "feucht" };
-const String POT_1_WATERING_STR = "Topf 1 bewaess.";
-const String POT_2_WATERING_STR = "Topf 2 bewaess.";
+const String WATERING_STR = "Bewaesserung";
 const String WATER_LOW_STR = "Tank fuellen!";
 const String LITER_STR = "Liter";
 
@@ -79,12 +78,6 @@ const String LITER_STR = "Liter";
 #define LCD_COLS 16
 const char EMPTY_STR[] = ""; // Empty String for padding etc. used in menus
 enum {
-//	LCD_PIN1 = 4,
-//	LCD_PIN2 = 6,
-//	LCD_PIN3 = 7,
-//	LCD_PIN4 = 8,
-//	LCD_PIN5 = 9,
-//	LCD_PIN6 = 10
 	LCD_PIN1 = 8,
 	LCD_PIN2 = 9,
 	LCD_PIN3 = 10,
@@ -121,11 +114,16 @@ const byte RUN_SWITCH_PIN = 4;
  **************************************************************************************************/
 // button numbers must correspond with return values of gmp_keypad_utils method in gmputil
 enum {
-	BUTTON_UP = 10, //A
-	BUTTON_DOWN = 11, //B
-	BUTTON_RIGHT = 12, //C
-	BUTTON_BACK = 13, //D
-	BUTTON_SELECT = 15 //#
+	BUTTON_UP,
+	BUTTON_DOWN,
+	BUTTON_RIGHT,
+	BUTTON_BACK,
+	BUTTON_SELECT,
+	BUTTON_UNUSED,
+	BUTTON_POWER,
+	BUTTON_REPEAT
 };
+
+const unsigned long DEBOUNCE_TIME = 500;
 
 #endif /* CONFIG_H_ */

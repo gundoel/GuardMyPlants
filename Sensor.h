@@ -10,17 +10,20 @@
 
 class Sensor {
 protected:
+	byte pin; // pin where sensor is connected
+	int id;
 	int previousValue = 0;
 	int lowValue; /* low value of sensor (can be a higher absolute value than highValue,
 	e. g. moisture sensor returns high value for low moisture and vice versa */
 	int highValue; // highest value of sensor
 	int toleratedDeviation = 0;
-	byte pin; // pin where sensor is connected
+
 
 public:
-	Sensor(int lowValue, int highValue, int toleratedDeviation, byte pin);
+	Sensor(int lowValue, int highValue, int toleratedDeviation, byte pin, int id);
 	double getPercentValue();
 	double getStableValue();
+	int getId();
 };
 
 #endif /* SENSOR_H_ */

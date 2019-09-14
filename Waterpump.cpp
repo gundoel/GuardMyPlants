@@ -8,12 +8,17 @@
 #include "Waterpump.h"
 #include "debug.h"
 
-Waterpump::Waterpump(byte pin) {
+Waterpump::Waterpump(byte pin, int id) {
 	this->pin = pin;
+	this->id = id;
 	pinMode(pin, OUTPUT);
 }
 
 Waterpump::~Waterpump() {}
+
+int Waterpump::getId() {
+	return id;
+}
 
 boolean Waterpump::getIsPumpRunning() {
 	return isPumpRunning;

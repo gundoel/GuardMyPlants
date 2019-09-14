@@ -10,7 +10,7 @@
 #include "SoilMoistureSensor.h"
 
 SoilMoistureSensor::SoilMoistureSensor(int minValue, int highValue,
-		int toleratedDeviation, byte pin) :
-		Sensor(minValue, highValue, toleratedDeviation, pin) {
+		int toleratedDeviation, byte pin, int id) :
+		Sensor(minValue, highValue, toleratedDeviation, pin, id) {
 	pinMode(pin, INPUT);
 }
