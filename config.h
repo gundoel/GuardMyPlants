@@ -19,12 +19,17 @@ const boolean SERIAL_CONTROL_ACTIVE = true; // allows control of GuardMyPlants o
 /**************************************************************************************************
  * PUMP & WATER TANK
  **************************************************************************************************/
-// todo pumpenklasse braucht eine bewaesserungsmethode, der nur die benoetigte menge
-// in ml uebergeben werden kann. foerdermenge und pwm interessieren GMP nicht, die
-// pumpenklasse muss das handeln
-// defines flow rate of pump in milliliters
 const int PUMP_MILLILITERS_PER_SECOND = 100;
 const int PUMP_PWM = 70;
+// defines pwm values for different flow rates
+const int DUTY_CYCLE_SMALL = 50; // Duty Cycle for small amounts
+const int DUTY_CYCLE_MEDIUM = 100; // Duty Cycle for medium amounts
+const int DUTY_CYCLE_LARGE = 150; // Duty Cycle for large amounts
+// defines flow rate of pump in milliliters
+const float PUMP_CAPACITY_SMALL = 6; // 6 ml/s
+const float PUMP_CAPACITY_MEDIUM = 19; // 19 ml/s
+const float PUMP_CAPACITY_LARGE = 23; // 23 ml/s
+
 // defines how many per cent of pot size are pumped into the pot in 1 cycle. e. g. pot = 500ml -> 50ml
 const int DEFAULT_PERCENTAGE_POT_SIZE = 10;
 // defines capacity of water tank in milliliters
@@ -62,8 +67,8 @@ const Moisture DEFAULT_MOISTURE = moisture_medium;
 const String POT_SIZE_STR[] { "klein", "mittel", "gross" };
 // minimal moisture in a pot (%). sequence must correspond with enum Needed_Moisture
 const String POT_MOISTURE_STR[] { "leicht feucht", "mittelfeucht", "feucht" };
-const String POT_1_WATERED_STR = "Topf 1 bewaess.";
-const String POT_2_WATERED_STR = "Topf 2 bewaess.";
+const String POT_1_WATERING_STR = "Topf 1 bewaess.";
+const String POT_2_WATERING_STR = "Topf 2 bewaess.";
 const String WATER_LOW_STR = "Tank fuellen!";
 const String LITER_STR = "Liter";
 
@@ -101,6 +106,7 @@ const byte WATER_LEVEL_SENSOR_PIN = A0;
 const byte SOIL_MOISTURE_SENSOR_1_PIN = A1;
 const byte SOIL_MOISTURE_SENSOR_2_PIN = A2;
 const byte ANALOG_KEYPAD_PIN = 4;
+const byte IR_RECEIVER_PIN = 2;
 
 // PWM Pins
 const byte WATERPUMP_1_PIN = 3;

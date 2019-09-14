@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <AnalogMatrixKeypad.h>
 #include <LiquidCrystal.h>
+#include <Timer.h>
 #include "config.h"
 #include "MenuData.h"
 #include "Sensor.h"
@@ -20,6 +21,9 @@ Potsize potSize1 = DEFAULT_POT_SIZE;
 Potsize potSize2 = DEFAULT_POT_SIZE;
 Moisture neededMoisture1Percent = DEFAULT_MOISTURE;
 Moisture neededMoisture2Percent = DEFAULT_MOISTURE;
+
+Timer timerPump1;
+Timer timerPump2;
 
 int onOffSwitch = 0;
 int startRunTime = 0;
@@ -192,6 +196,24 @@ String getMoistureString(Moisture moisture) {
 	}
 }
 
+// Returns moisture (low, medium etc.) as String
+int getNeededMoisture(Moisture moisture) {
+	switch (moisture) {
+	case moisture_low:
+		return NEEDED_MOISTURE_LOW;
+		break;
+	case moisture_medium:
+		return NEEDED_MOISTURE_MEDIUM;
+		break;
+	case moisture_high:
+		return NEEDED_MOISTURE_HIGH;
+		break;
+	default:
+		return 0;
+		break;
+	}
+}
+
 // stores selected pot size in potSizeVariable
 //TODO could be done better with some kind of index
 void togglePotSize(Potsize *potSizeVariable) {
@@ -245,12 +267,12 @@ byte processMenuCommand(byte cmdId) {
 		break;
 	}
 	case menuCommandPot1Pump: {
-		waterpump1.watering(200);
+		watering(1, 100);
 		complete = true;
 		break;
 	}
 	case menuCommandPot2Pump: {
-		waterpump2.watering(200);
+		watering(2, 100);
 		complete = true;
 		break;
 	}
@@ -371,10 +393,39 @@ int getPotSizeMililiters(Potsize potSize) {
 	}
 }
 
+// returns needed water for watering cycle
 int getNeededWaterMilliliters(int pot) {
 	Potsize potSize = (pot == 1) ? potSize1 : potSize2;
 	// calculate needed water with percentage defined in config.h
 	return (getPotSizeMililiters(potSize) / DEFAULT_PERCENTAGE_POT_SIZE);
+}
+
+/* returns watering time in milli seconds depending on on
+requested quantity, the duty cycle is adapted in order to avoid overflow*/
+void watering(int pump, int neededMilliliters) {
+	unsigned long int wateringTimeMilliseconds;
+	int dutyCycle;
+	if (neededMilliliters > 0 && neededMilliliters <= 20) {
+		dutyCycle = DUTY_CYCLE_SMALL;
+		wateringTimeMilliseconds = ((unsigned long int) (neededMilliliters / PUMP_CAPACITY_SMALL) * 1000);
+	}
+	else if (neededMilliliters <= 60) {
+		dutyCycle = DUTY_CYCLE_MEDIUM;
+		wateringTimeMilliseconds = ((unsigned long int) (neededMilliliters / PUMP_CAPACITY_MEDIUM) * 1000);
+	}
+	else if (neededMilliliters > 60) {
+		dutyCycle = DUTY_CYCLE_LARGE;
+		wateringTimeMilliseconds = ((unsigned long int) (neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
+	}
+	//TODO ugly
+	if(wateringTimeMilliseconds > 0 && pump == 1) {
+		waterpump1.startWatering(dutyCycle);
+		timerPump1.after(wateringTimeMilliseconds, stopPump1);
+	}
+	else if (wateringTimeMilliseconds > 0) {
+		waterpump2.startWatering(dutyCycle);
+		timerPump2.after(wateringTimeMilliseconds, stopPump2);
+	}
 }
 
 // activates the pump for to pump given amount of water into pot
@@ -386,6 +437,16 @@ boolean isWaterOK(int neededWaterMilliliters) {
 	} else {
 		return false;
 	}
+}
+
+//TODO not really well implemented, but callback functions dont take
+// parameters and callback is not supported on instance by library
+void stopPump1() {
+	waterpump1.stopWatering();
+}
+
+void stopPump2() {
+	waterpump2.stopWatering();
 }
 
 void switchToRunMode() {
@@ -407,6 +468,16 @@ void switchToErrorMode(String errorMessage) {
 	delay(1000);
 }
 
+void switchOff() {
+	error = false;
+	run = false;
+	digitalWrite(ERROR_LED_PIN, LOW);
+	digitalWrite(RUN_LED_PIN, LOW);
+	//clean up message row
+	showStringMessage(EMPTY_STR, 1, 0);
+	delay(1000);
+}
+
 void setup() {
 	Serial.begin(9600);
 	Serial.flush(); // Empty serial puffer
@@ -423,6 +494,8 @@ void loop() {
 	 * MENU EXECUTION
 	 **************************************************************************************************/
 	btn = getButton();
+	timerPump1.update();
+	timerPump2.update();
 	switch (appMode) {
 	case APP_NORMAL_MODE:
 		if (btn == BUTTON_SELECT) {
@@ -471,24 +544,32 @@ void loop() {
 	if (onOffSwitch == HIGH)
 // Switch from ON to OFF and vice versa
 	{
-		if (!run) {
+		if (!run && !error) {
 			switchToRunMode();
 			// store start time for logging since we do not have a time server
 			startRunTime = millis();
 		} else {
-			run = false;
-			digitalWrite(RUN_LED_PIN, LOW);
+			switchOff();
 		}
 	}
 	if (appMode == APP_NORMAL_MODE && !error) {
 		int neededWaterMilliliters;
-		if (run && soilMoistureSensor1.getPercentValue() < neededMoisture1Percent) {
+		Serial.println("Run: " + String(run));
+		Serial.println("Needed water: " + String(getNeededWaterMilliliters(1)));
+		Serial.println("Water ok: " + String(isWaterOK(getNeededWaterMilliliters(1))));
+		Serial.println("Needed Moist. 1: " + String(getNeededMoisture(neededMoisture1Percent)));
+		Serial.println("Moist. 1: " + String(soilMoistureSensor1.getPercentValue()));
+		if (run && soilMoistureSensor1.getPercentValue() < getNeededMoisture(neededMoisture1Percent)) {
+			Serial.print("Running");
 			neededWaterMilliliters = getNeededWaterMilliliters(1);
 			if (isWaterOK(neededWaterMilliliters)) {
+				watering(1, neededWaterMilliliters);
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				waterpump1.watering(neededWaterMilliliters);
-				showStringMessage(POT_1_WATERED_STR, 1, 0);
+				if (waterpump2.getIsPumpRunning()) {
+					showStringMessage(POT_1_WATERING_STR, 1, 0);
+				}
+				DEBUG_PRINTLN(String(POT_1_WATERING_STR));
 			} else {
 				/* shutdown, even though there could be enough water for
 				 * multiple cycles with plant 2 (smaller pot): plant 1 would die
@@ -496,14 +577,16 @@ void loop() {
 				switchToErrorMode(WATER_LOW_STR);
 			}
 		}
-		if (run && soilMoistureSensor2.getPercentValue() < neededMoisture2Percent) {
+		if (run && soilMoistureSensor2.getPercentValue() < getNeededMoisture(neededMoisture2Percent)) {
 			neededWaterMilliliters = getNeededWaterMilliliters(2);
 			if (isWaterOK(neededWaterMilliliters)) {
-				waterpump2.watering(neededWaterMilliliters);
+				watering(2, neededWaterMilliliters);
 				//TODO write log message / maybe show active state over led or display
 				//TODO delay and wait for water to seep away
-				showStringMessage(POT_2_WATERED_STR, 1, 0);
-				DEBUG_PRINTLN(String(POT_2_WATERED_STR));
+				if (waterpump2.getIsPumpRunning()) {
+					showStringMessage(POT_2_WATERING_STR, 1, 0);
+				}
+				DEBUG_PRINTLN(String(POT_2_WATERING_STR));
 			} else {
 				switchToErrorMode(WATER_LOW_STR);
 			}

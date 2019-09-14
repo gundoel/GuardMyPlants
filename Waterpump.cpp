@@ -9,30 +9,26 @@
 #include "debug.h"
 
 Waterpump::Waterpump(byte pin) {
+	this->pin = pin;
 	pinMode(pin, OUTPUT);
 }
 
 Waterpump::~Waterpump() {}
 
-// delivers the required quantity of water
-void Waterpump::watering(int waterQuantity) {
-	// depending on the requested quantity, the duty cycle is adapted in order to avoid overflow
-	float wateringTime = 0;
-	if (waterQuantity <= 20) {
-		dutyCycle = dutyCycleSmall;
-		wateringTime = waterQuantity/PumpCapacitySmall;
-	}
-	if (waterQuantity > 20 && waterQuantity <= 60) {
-			dutyCycle = dutyCycleMedium;
-			wateringTime = waterQuantity/PumpCapacityMedium;
-		}
-	if (waterQuantity > 60) {
-			dutyCycle = dutyCycleLarge;
-			wateringTime = waterQuantity/PumpCapacityLarge;
-		}
+boolean Waterpump::getIsPumpRunning() {
+	return isPumpRunning;
+}
+
+void Waterpump::setIsPumpRunning(boolean isPumpRunning = false) {
+	this->isPumpRunning = isPumpRunning;
+}
+
+void Waterpump::startWatering(int dutyCycle) {
 	analogWrite(pin, dutyCycle);
-	//DEBUG_PRINTLN(dutyCycle);
-	delay(wateringTime * 1000);
-	//DEBUG_PRINTLN(wateringTime);
+	setIsPumpRunning(true);
+}
+
+void Waterpump::stopWatering() {
 	digitalWrite(pin, LOW);
+	setIsPumpRunning(false);
 }
