@@ -117,7 +117,7 @@ byte mapASCIICodeToKey(byte asciiCode) {
 /**************************************************************************************************
  * MENU SETUP AND FUNCTIONS
  **************************************************************************************************/
-byte btn; // button
+byte btn = BUTTON_REPEAT; // button
 
 enum AppModeValues {
 	APP_NORMAL_MODE, APP_MENU_MODE, APP_PROCESS_MENU_CMD
@@ -135,14 +135,9 @@ extern char *rpad(char *dest, const char *str, char chr = ' ',
 // Apply string concatenation. argc = number of string arguments to follow.
 extern char *fmt(char *dest, unsigned char argc, ...);
 
-//TODO move functions to some header
-void refreshMenuDisplay(byte refreshMode);
-byte getNavAction();
-
 byte appMode = APP_NORMAL_MODE;
 MenuManager Menu1(GMPMenu_Root, menuCount(GMPMenu_Root));
 
-//TODO move functions to some header file
 void showDefaultScreen() {
 	lcd.clear();
 	lcd.print(DEFAULT_SCREEN);
@@ -286,7 +281,6 @@ int getNeededMoisture(Moisture moisture) {
 }
 
 // stores selected pot size in potSizeVariable
-//TODO could be done better with some kind of index
 void togglePotSize(Potsize *potSizeVariable) {
 	Potsize *currentSelection = potSizeVariable;
 	if (*currentSelection == pot_size_small) {
@@ -299,7 +293,6 @@ void togglePotSize(Potsize *potSizeVariable) {
 }
 
 // stores selected moisture in moistureVariable
-//TODO could be done better with some kind of index
 void toggleMoisture(Moisture *moistureVariable) {
 	Moisture *currentSelection = moistureVariable;
 	if (*currentSelection == moisture_low) {
@@ -313,8 +306,6 @@ void toggleMoisture(Moisture *moistureVariable) {
 
 
 //TODO cases need to be more generic. same things are done multiple times
-//----------------------------------------------------------------------
-// Addition or removal of menu items in MenuData.h will require this method to be modified accordingly.
 byte processMenuCommand(byte cmdId) {
 	byte complete = false; // set to true when menu command processing complete.
 	//TODO Processing Logs, check Settings etc.
@@ -459,8 +450,7 @@ int getPotSizeMililiters(Potsize potSize) {
 		return POT_SIZE_LARGE;
 		break;
 	default:
-		//TODO
-		return 10;
+		return POT_SIZE_SMALL;
 	}
 }
 
@@ -510,7 +500,7 @@ boolean isWaterOK(int neededWaterMilliliters) {
 	}
 }
 
-//TODO not really well implemented, but callback functions dont take
+//TODO not really well implemented, but callback functions do not take
 // parameters and callback is not supported on instance by library
 void stopPump1() {
 	waterpump1.stopWatering();
@@ -525,9 +515,8 @@ void switchToRunMode() {
 	run = true;
 	digitalWrite(ERROR_LED_PIN, LOW);
 	digitalWrite(RUN_LED_PIN, HIGH);
-	//clean up message row
-	showStringMessage(EMPTY_STR, 1, 0);
-	delay(1000);
+	showDefaultScreen();
+	appMode = APP_NORMAL_MODE;
 }
 
 void switchToErrorMode(String errorMessage) {
@@ -536,7 +525,6 @@ void switchToErrorMode(String errorMessage) {
 	digitalWrite(ERROR_LED_PIN, HIGH);
 	digitalWrite(RUN_LED_PIN, LOW);
 	showStringMessage(errorMessage, 1, 0);
-	delay(1000);
 }
 
 void switchOff() {
@@ -546,7 +534,6 @@ void switchOff() {
 	digitalWrite(RUN_LED_PIN, LOW);
 	//clean up message row
 	showStringMessage(EMPTY_STR, 1, 0);
-	delay(1000);
 }
 
 void setup() {
@@ -576,8 +563,6 @@ void loop() {
 			appMode = APP_MENU_MODE;
 			refreshMenuDisplay(REFRESH_DESCEND);
 		}
-//TODO remove
-		lcd.setCursor(0, 0);
 		break;
 	case APP_MENU_MODE: {
 		byte menuMode = Menu1.handleNavigation(getNavAction,
