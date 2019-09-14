@@ -517,6 +517,7 @@ void switchToRunMode() {
 	digitalWrite(RUN_LED_PIN, HIGH);
 	showDefaultScreen();
 	appMode = APP_NORMAL_MODE;
+	delay(1000);
 }
 
 void switchToErrorMode(String errorMessage) {
@@ -525,6 +526,7 @@ void switchToErrorMode(String errorMessage) {
 	digitalWrite(ERROR_LED_PIN, HIGH);
 	digitalWrite(RUN_LED_PIN, LOW);
 	showStringMessage(errorMessage, 1, 0);
+	delay(1000);
 }
 
 void switchOff() {
@@ -534,6 +536,7 @@ void switchOff() {
 	digitalWrite(RUN_LED_PIN, LOW);
 	//clean up message row
 	showStringMessage(EMPTY_STR, 1, 0);
+	delay(1000);
 }
 
 void setup() {
