@@ -387,12 +387,15 @@ byte processMenuCommand(byte cmdId) {
 		break;
 	}
 	case menuCommandReset: {
-		// reset all variables
-		neededMoisture1Percent = DEFAULT_MOISTURE;
-		neededMoisture2Percent = DEFAULT_MOISTURE;
-		potSize1 = DEFAULT_POT_SIZE;
-		potSize2 = DEFAULT_POT_SIZE;
-		showStringMessage(RESET_SUCCESSFUL, 1, 0);
+		showStringMessage(RESET_CONFIRM, 1, 0);
+		if (btn == BUTTON_SELECT) {
+			neededMoisture1Percent = DEFAULT_MOISTURE;
+			neededMoisture2Percent = DEFAULT_MOISTURE;
+			potSize1 = DEFAULT_POT_SIZE;
+			potSize2 = DEFAULT_POT_SIZE;
+			clear2ndLine();
+			complete = true;
+		}
 		break;
 	}
 	default: {
@@ -603,6 +606,7 @@ void loop() {
 	 * MENU EXECUTION
 	 **************************************************************************************************/
 	btn = getButton();
+	// update all timers
 	timerPump1.update();
 	timerPump2.update();
 	// indicate state with leds

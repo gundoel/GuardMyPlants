@@ -67,7 +67,7 @@ const Moisture DEFAULT_MOISTURE = moisture_medium;
  * UI TEXTS
  **************************************************************************************************/
 const String DEFAULT_SCREEN = "GuardMyPlants";
-const String RESET_SUCCESSFUL = "Zurueckgesetzt";
+const String RESET_CONFIRM = "Sicher?";
 
 // available pot sizes. sequence must correspond with enum Potsize
 const String POT_SIZE_STR[] { "klein", "mittel", "gross" };

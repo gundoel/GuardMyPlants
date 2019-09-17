@@ -44,13 +44,13 @@ PROGMEM const char GMPMenu_2_5[] = "Pumpe Topf 2";
 PROGMEM const MenuItem GMPMenu_List_2[] = {{menuCommandWaterlevel, GMPMenu_2_1}, {menuCommandPot1Moisture, GMPMenu_2_2}, {menuCommandPot2Moisture, GMPMenu_2_3}, {menuCommandPot1Pump, GMPMenu_2_4}, {menuCommandPot2Pump, GMPMenu_2_5}, {menuCommandBack, GMPMenu_back}};
 
 PROGMEM const char GMPMenu_3_1[] = "Log anzeigen";
-PROGMEM const char GMPMenu_3_2[] = "Log zuruecksetz";
+PROGMEM const char GMPMenu_3_2[] = "Log zuruecksetz.";
 PROGMEM const MenuItem GMPMenu_List_3[] = {{menuCommandShowLog, GMPMenu_3_1}, {menuCommandResetLog, GMPMenu_3_2}, {menuCommandBack, GMPMenu_back}};
 
 PROGMEM const char GMPMenu_1[] = "Einstellungen";
 PROGMEM const char GMPMenu_2[] = "Test";
 PROGMEM const char GMPMenu_3[] = "Log";
-PROGMEM const char GMPMenu_4[] = "Einst. zuruecks";
+PROGMEM const char GMPMenu_4[] = "Einst. zuruecks.";
 PROGMEM const MenuItem GMPMenu_Root[] = {{menuCommandSettings, GMPMenu_1, GMPMenu_List_1, menuCount(GMPMenu_List_1)}, {menuCommandTest, GMPMenu_2, GMPMenu_List_2, menuCount(GMPMenu_List_2)}, {menuCommandLog, GMPMenu_3, GMPMenu_List_3, menuCount(GMPMenu_List_3)}, {menuCommandReset, GMPMenu_4}, {menuCommandBack, GMPMenu_exit}};
 
 /*
@@ -108,10 +108,10 @@ case menuCommandReset :
 		<Item Id="Log" Name="Log">
 			<MenuItems>
 				<Item Id="ShowLog" Name="Log anzeigen"/>
-				<Item Id="ResetLog" Name="Log zuruecksetzen"/>
+				<Item Id="ResetLog" Name="Log zuruecksetz."/>
 			</MenuItems>
 		</Item>
-		<Item Id="Reset" Name="Einst. zuruecksetzen"/>
+		<Item Id="Reset" Name="Einst. zuruecks."/>
 	</MenuItems>
 </RootMenu>
 */

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<RootMenu xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+	<!-- Attributes BackText and ExitText removed, since not needed for GMP-Menu. Menu Builder creates constant nonetheless.
+		Remove constants GMPMenu_back and GMP_exit from MenuData.h after Building Menu -->
+	<Config IdPrefix="menuCommand" VarPrefix="GMPMenu" UseNumbering="false" IncludeNumberHierarchy="false" MaxNameLen="15" MenuBackFirstItem="false" AvrProgMem="true"/>
+	<MenuItems>
+		<Item Id="Settings" Name="Einstellungen">
+			<MenuItems>
+				<!-- _Selection suffix to mark menu as selection menu -->
+				<Item Id="Pot1Size_Selection" Name="Groesse Topf 1"/>
+				<Item Id="Pot1Moisture_Selection" Name="Feucht. Topf 1"/>
+				<Item Id="Pot2Size_Selection" Name="Groesse Topf 2"/>
+				<Item Id="Pot2Moisture_Selection" Name="Feucht. Topf 2"/>
+			</MenuItems>
+		</Item>
+		<Item Id="Test" Name="Test">
+			<MenuItems>
+				<Item Id="Waterlevel" Name="Wasserstand"/>
+				<Item Id="Pot1Moisture" Name="Feucht. Topf 1"/>
+				<Item Id="Pot2Moisture" Name="Feucht. Topf 2"/>
+				<Item Id="Pot1Pump" Name="Pumpe Topf 1"/>
+				<Item Id="Pot2Pump" Name="Pumpe Topf 2"/>
+			</MenuItems>
+		</Item>
+		<Item Id="Log" Name="Log">
+			<MenuItems>
+				<Item Id="ShowLog" Name="Log anzeigen"/>
+				<Item Id="ResetLog" Name="Log zuruecksetz."/>
+			</MenuItems>
+		</Item>
+		<Item Id="Reset" Name="Einst. zuruecks."/>
+	</MenuItems>
+</RootMenu>
