@@ -20,20 +20,19 @@ int Waterpump::getId() {
 	return id;
 }
 
-boolean Waterpump::getIsPumpRunning() {
-	return isPumpRunning;
+boolean Waterpump::getIsPumpReady() {
+	return isPumpReady;
 }
 
-void Waterpump::setIsPumpRunning(boolean isPumpRunning = false) {
-	this->isPumpRunning = isPumpRunning;
+void Waterpump::setIsPumpReady(boolean isPumpReady) {
+	this->isPumpReady = isPumpReady;
 }
 
 void Waterpump::startWatering(int dutyCycle) {
 	analogWrite(pin, dutyCycle);
-	setIsPumpRunning(true);
+	setIsPumpReady(false);
 }
 
 void Waterpump::stopWatering() {
 	digitalWrite(pin, LOW);
-	setIsPumpRunning(false);
 }

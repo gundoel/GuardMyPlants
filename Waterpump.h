@@ -13,20 +13,24 @@
 class Waterpump {
 
 private:
-	int dutyCycle = 0; // pump duty cycle. Low duty cycle for small amounts of water, higher value for bigger amounts.
+	/* pump duty cycle. Low duty cycle for small amounts of water,
+	higher value for bigger amounts.*/
+	int dutyCycle = 0;
 	int id;
-	byte pin; // pin where pump is connected
-	boolean isPumpRunning = false;
+	// pin where pump is connected
+	byte pin;
+	// pumps are not ready if running or gmp is waiting for water to seep away
+	boolean isPumpReady = true;
 
 
 public:
 	Waterpump(byte pin, int id);
 	virtual ~Waterpump();
-	int Waterpump::getId();
-	boolean getIsPumpRunning();
+	int getId();
+	boolean getIsPumpReady();
 	void startWatering(int dutyCycle);
 	void stopWatering();
-	void setIsPumpRunning(boolean isPumpRunning);
+	void setIsPumpReady(boolean isPumpReady);
 };
 
 #endif /* WATERPUMP_H_ */
