@@ -21,7 +21,7 @@ const boolean SERIAL_CONTROL_ACTIVE = false;
  * PUMP & WATER TANK
  **************************************************************************************************/
 // defines pwm values for different flow rates
-const int DUTY_CYCLE_SMALL = 50; // Duty Cycle for small amounts
+const int DUTY_CYCLE_SMALL = 55; // Duty Cycle for small amounts
 const int DUTY_CYCLE_MEDIUM = 100; // Duty Cycle for medium amounts
 const int DUTY_CYCLE_LARGE = 150; // Duty Cycle for large amounts
 
@@ -42,10 +42,11 @@ const int MIN_WATER_LEVEL_PERCENT = 10;
 /**************************************************************************************************
  * POTS
  **************************************************************************************************/
-// potsize values in milliliters
-const int POT_SIZE_SMALL = 200;
-const int POT_SIZE_MEDIUM = 1000;
-const int POT_SIZE_LARGE = 2000;
+// minimum potsize values in milliliters
+// edit POT_SIZE_STR if edited
+const int POT_SIZE_SMALL = 100;
+const int POT_SIZE_MEDIUM = 500;
+const int POT_SIZE_LARGE = 1000;
 
 // time in milliseconds water needs to seep away before watering again
 const unsigned long SEEP_AWAY_TIME_MS = 5000;
@@ -53,13 +54,14 @@ const unsigned long SEEP_AWAY_TIME_MS = 5000;
 enum Potsize {
 	pot_size_small, pot_size_medium, pot_size_large
 };
-const Potsize DEFAULT_POT_SIZE = pot_size_medium;
+/* default must be small to prevent overflow: if pot is bigger,
+watering is executed more often in smaller amounts (no problem) */
+const Potsize DEFAULT_POT_SIZE = pot_size_small;
 
 // needed moisture percent values
-// TODO measure values
-const int NEEDED_MOISTURE_LOW = 10;
-const int NEEDED_MOISTURE_MEDIUM = 25;
-const int NEEDED_MOISTURE_HIGH = 50;
+const int NEEDED_MOISTURE_LOW = 30;
+const int NEEDED_MOISTURE_MEDIUM = 50;
+const int NEEDED_MOISTURE_HIGH = 70;
 enum Moisture {moisture_low, moisture_medium, moisture_high};
 const Moisture DEFAULT_MOISTURE = moisture_medium;
 
@@ -70,7 +72,7 @@ const String DEFAULT_SCREEN = "GuardMyPlants";
 const String RESET_CONFIRM = "Sicher?";
 
 // available pot sizes. sequence must correspond with enum Potsize
-const String POT_SIZE_STR[] { "klein", "mittel", "gross" };
+const String POT_SIZE_STR[] { "klein >= 100ml", "mittel >= 500ml", "gross >=1000ml" };
 
 // minimal moisture in a pot (%). sequence must correspond with enum Moisture
 const String POT_MOISTURE_STR[] { "leicht feucht", "mittelfeucht", "feucht" };
@@ -101,7 +103,6 @@ enum {
 const byte WATER_LEVEL_SENSOR_PIN = A0;
 const byte SOIL_MOISTURE_SENSOR_1_PIN = A1;
 const byte SOIL_MOISTURE_SENSOR_2_PIN = A2;
-const byte ANALOG_KEYPAD_PIN = 4;
 const byte IR_RECEIVER_PIN = 2;
 
 // PWM Pins
@@ -109,8 +110,7 @@ const byte WATERPUMP_1_PIN = 5;
 const byte WATERPUMP_2_PIN = 6;
 
 const byte RUN_LED_PIN = 3;
-const byte ERROR_LED_PIN = 7;
-const byte RUN_SWITCH_PIN = 4;
+const byte ERROR_LED_PIN = 4;
 
 /**************************************************************************************************
  * BUTTONS

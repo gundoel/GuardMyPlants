@@ -9,7 +9,6 @@
 #include "SoilMoistureSensor.h"
 #include "WaterLevelSensor.h"
 #include "Waterpump.h"
-#include "Log.h"
 #include "gmputil.hpp"
 
 using namespace gmp_string_utils;
@@ -26,9 +25,6 @@ Timer timerPump1;
 Timer timerPump2;
 int timerId1;
 int timerId2;
-
-// millis() when watering activated (for logging)
-int startRunTime = 0;
 
 // variables are toggled to handle run and error state
 int onOffSwitch = 0;
@@ -47,7 +43,7 @@ char strbuf[LCD_COLS + 1]; // one line of lcd display
 /* initialize sensors with interface pins defined in config.h
  * Tested max return value of water level sensor is 320, not 1024 as mentioned in specs.
  * Tested min value is 40. */
-WaterLevelSensor waterLevelSensor(0, 336, 10, WATER_LEVEL_SENSOR_PIN, 1);
+WaterLevelSensor waterLevelSensor(30, 360, 20, WATER_LEVEL_SENSOR_PIN, 1);
 
 // soil moisture sensors return value high when moisture low. parameter 1 and 2 switched
 SoilMoistureSensor soilMoistureSensor1(1015, 280, 10, SOIL_MOISTURE_SENSOR_1_PIN, 1);
@@ -147,7 +143,8 @@ MenuManager Menu1(GMPMenu_Root, menuCount(GMPMenu_Root));
 void showDefaultScreen() {
 	lcd.clear();
 	lcd.print(DEFAULT_SCREEN);
-	//reset menu in order to start at root again (e. g. if start button was pressed when in menu)
+	/*reset menu in order to start at root again
+	 * (e. g. if start button was pressed when in menu)*/
 	Menu1.reset();
 }
 
@@ -320,7 +317,6 @@ void toggleMoisture(Moisture *moistureVariable) {
 //TODO cases need to be more generic. same things are done multiple times
 byte processMenuCommand(byte cmdId) {
 	byte complete = false; // set to true when menu command processing complete.
-	//TODO Logs
 	String currentStateMessage;
 	Potsize *currentPotSelection;
 	Moisture *currentMoistureSelection;
@@ -478,28 +474,32 @@ int getPotSizeMililiters(Potsize potSize) {
 int getNeededWaterMilliliters(int pot) {
 	Potsize potSize = (pot == 1) ? potSize1 : potSize2;
 	// calculate needed water with percentage defined in config.h
-	return (getPotSizeMililiters(potSize) / DEFAULT_PERCENTAGE_POT_SIZE);
+	return multiplyPercent(getPotSizeMililiters(potSize), DEFAULT_PERCENTAGE_POT_SIZE);
 }
 
 /* returns watering time in milliseconds depending on
 requested quantity. duty cycle is adapted in order to avoid overflow */
 void watering(int pump, int neededMilliliters) {
-	unsigned long wateringTimeMilliseconds;
+	double wateringTimeMilliseconds;
 	int dutyCycle;
 	if (neededMilliliters > 0 && neededMilliliters <= 20) {
 		dutyCycle = DUTY_CYCLE_SMALL;
-		wateringTimeMilliseconds = ((unsigned long) (neededMilliliters / PUMP_CAPACITY_SMALL) * 1000);
+		DEBUG_PRINTLN("Duty cycle small");
+		wateringTimeMilliseconds = ((neededMilliliters / PUMP_CAPACITY_SMALL) * 1000);
 	}
 	else if (neededMilliliters <= 60) {
 		dutyCycle = DUTY_CYCLE_MEDIUM;
-		wateringTimeMilliseconds = ((unsigned long) (neededMilliliters / PUMP_CAPACITY_MEDIUM) * 1000);
+		DEBUG_PRINTLN("Duty cycle medium");
+		wateringTimeMilliseconds = ((neededMilliliters / PUMP_CAPACITY_MEDIUM) * 1000);
 	}
 	else if (neededMilliliters > 60) {
 		dutyCycle = DUTY_CYCLE_LARGE;
-		wateringTimeMilliseconds = ((unsigned long) (neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
+		DEBUG_PRINTLN("Duty cycle large");
+		wateringTimeMilliseconds = ((neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
 	}
 	//TODO ugly
 	if(wateringTimeMilliseconds > 0 && pump == 1) {
+		Serial.println(wateringTimeMilliseconds);
 		waterpump1.startWatering(dutyCycle);
 		// store timer id to stop event when gmp is switched off
 		timerId1 = timerPump1.after(wateringTimeMilliseconds, stopPump1);
@@ -593,7 +593,6 @@ void setup() {
 	showDefaultScreen();
 
 	// set up pin modes
-	pinMode(RUN_SWITCH_PIN, INPUT);
 	pinMode(ERROR_LED_PIN, OUTPUT);
 	pinMode(RUN_LED_PIN, OUTPUT);
 
@@ -658,19 +657,18 @@ void loop() {
 	/**************************************************************************************************
 	 * WATER PLANTS
 	 **************************************************************************************************/
-	onOffSwitch = digitalRead(RUN_SWITCH_PIN);
-	if (onOffSwitch == HIGH || btn == BUTTON_POWER)
+	if (btn == BUTTON_POWER)
 // Switch from ON to OFF and vice versa
 	{
 		if (!run && !error) {
 			switchToRunMode();
-			// store start time for logging since we do not have a time server
-			startRunTime = millis();
 		} else {
 			switchToOffMode();
 		}
 	}
-	if (appMode == APP_NORMAL_MODE && !error) {
+	//Serial.println("Water level abs: " + String(waterLevelSensor.getStableValue()));
+	// watering is continued while in menu. no check for APP_NORMAL_MODE
+	if (!error) {
 		int neededWaterMilliliters;
 //		Serial.println("-------------------");
 //		Serial.println("Run: " + String(run));
@@ -685,7 +683,10 @@ void loop() {
 				//TODO write log message
 				if (waterpump1.getIsPumpReady()) {
 					watering(1, neededWaterMilliliters);
-					showStringMessage(WATERING_STR, 1, 0);
+					// supress Message when in Menu
+					if(appMode == APP_NORMAL_MODE) {
+						showStringMessage(WATERING_STR, 1, 0);
+					}
 				}
 			} else {
 				/* shutdown, even though there could be enough water for
@@ -697,9 +698,11 @@ void loop() {
 		if (run && soilMoistureSensor2.getPercentValue() < getNeededMoisturePercent(neededMoisture2Percent)) {
 			neededWaterMilliliters = getNeededWaterMilliliters(2);
 			if (isWaterOK(neededWaterMilliliters)) {
-				//TODO write log message
 				if (waterpump2.getIsPumpReady()) {
-					showStringMessage(WATERING_STR, 1, 0);
+					// supress Message when in Menu
+					if(appMode == APP_NORMAL_MODE) {
+						showStringMessage(WATERING_STR, 1, 0);
+					}
 					watering(2, neededWaterMilliliters);
 				}
 			} else {

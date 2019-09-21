@@ -27,9 +27,7 @@ int Sensor::getId() {
 	return id;
 }
 
-/* measured value needs to be stabilized using previous value and tolerated deviation
- * values below 0 are ignored
- */
+// measured value needs to be stabilized using previous value and tolerated deviation
 double Sensor::getStableValue() {
 	int currentValue = analogRead(pin);
 	if (((previousValue >= currentValue)
