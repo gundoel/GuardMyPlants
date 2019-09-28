@@ -2,7 +2,8 @@
  * SoilMoistureSensor.h
  *
  *  Created on: 29.07.2019
- *      Author: TAARISI3
+ *  Author: GMP Team
+ *  Version: 1.0
  */
 
 #ifndef SOILMOISTURESENSOR_H_
@@ -12,7 +13,7 @@
 
 class SoilMoistureSensor: public Sensor {
 public:
-	SoilMoistureSensor(int lowValue, int highValue, int toleratedDeviation, byte pin, int id);
+	SoilMoistureSensor(int lowValue, int highValue, int toleratedDeviation, byte pin);
 };
 
 #endif /* SOILMOISTURESENSOR_H_ */

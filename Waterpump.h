@@ -16,7 +16,6 @@ private:
 	/* pump duty cycle. Low duty cycle for small amounts of water,
 	higher value for bigger amounts.*/
 	int dutyCycle = 0;
-	int id;
 	// pin where pump is connected
 	byte pin;
 	// pumps are not ready if running or gmp is waiting for water to seep away
@@ -24,9 +23,8 @@ private:
 
 
 public:
-	Waterpump(byte pin, int id);
+	Waterpump(byte pin);
 	virtual ~Waterpump();
-	int getId();
 	boolean getIsPumpReady();
 	void startWatering(int dutyCycle);
 	void stopWatering();

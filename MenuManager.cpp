@@ -163,8 +163,7 @@ unsigned char MenuManager::handleNavigation(unsigned char (*getNavAction)(), voi
       if (!currentMenuHasParent())
       {
         menuMode = MENU_EXIT;
-        // do not go back to menu, go back to main screen
-//        reset();
+        reset();
       }
       else
       {

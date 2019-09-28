@@ -23,7 +23,6 @@ enum MenuMode         // Values returned by MenuManager::handleNavigation().
   MENU_REMAIN = 0,    // user is navigating menu.
   MENU_EXIT,          // user exits menu navigation.
   MENU_INVOKE_ITEM,    // user has selected menu item.
-  MENU_SELECTION		// user is on menu item with selection
 };
 
 enum MenuNavAction    // Used by call back function to map user input to these values.

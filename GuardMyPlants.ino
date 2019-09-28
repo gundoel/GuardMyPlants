@@ -4,21 +4,25 @@
 #include <LiquidCrystal.h>
 #include <Timer.h>
 #include "config.h"
+#include "gmputils.hpp"
 #include "MenuData.h"
 #include "Sensor.h"
 #include "SoilMoistureSensor.h"
 #include "WaterLevelSensor.h"
 #include "Waterpump.h"
-#include "gmputil.hpp"
 
 using namespace gmp_string_utils;
 using namespace gmp_math_utils;
 
-// Initialize with default values defined in config.h
-Potsize potSize1 = DEFAULT_POT_SIZE;
-Potsize potSize2 = DEFAULT_POT_SIZE;
-Moisture neededMoisture1Percent = DEFAULT_MOISTURE;
-Moisture neededMoisture2Percent = DEFAULT_MOISTURE;
+/**************************************************************************************************
+ * GLOBAL VARIABLES AND OBJECTS
+ **************************************************************************************************/
+
+// one line of lcd display
+char strbuf[LCD_COLS + 1];
+
+// initialize lcd with interface pins defined in config.h
+LiquidCrystal lcd(LCD_PIN1, LCD_PIN2, LCD_PIN3, LCD_PIN4, LCD_PIN5, LCD_PIN6);
 
 // timers to switch off pump after calculated run time
 Timer timerPump1;
@@ -26,31 +30,132 @@ Timer timerPump2;
 int timerId1;
 int timerId2;
 
-// variables are toggled to handle run and error state
-int onOffSwitch = 0;
-boolean run = false;
-boolean error = false;
+/* initialize sensors with interface pins defined in config.h
+ * Tested max return value of water level sensor is 320, not 1024 as mentioned in specs.
+ * Tested min value is 30. */
+WaterLevelSensor waterLevelSensor(40, 360, 20, WATER_LEVEL_SENSOR_PIN);
+
+// soil moisture sensors return value high when moisture low. parameters 1 and 2 switched
+SoilMoistureSensor soilMoistureSensor1(1015, 280, 10, SOIL_MOISTURE_SENSOR_1_PIN);
+SoilMoistureSensor soilMoistureSensor2(1015, 280, 10, SOIL_MOISTURE_SENSOR_2_PIN);
+
+Waterpump waterpump1(WATERPUMP_1_PIN);
+Waterpump waterpump2(WATERPUMP_2_PIN);
 
 // IR receiver
 IRrecv irrecv(IR_RECEIVER_PIN);
 decode_results results;
+// milliseconds when last input was read (used for debouncing)
 unsigned long lastInputRead = 0;
 
-// initialize lcd with interface pins defined in config.h
-LiquidCrystal lcd(LCD_PIN1, LCD_PIN2, LCD_PIN3, LCD_PIN4, LCD_PIN5, LCD_PIN6);
-char strbuf[LCD_COLS + 1]; // one line of lcd display
+// defines used buttons (input values are mapped to these buttons)
+enum {
+	BUTTON_UP,
+	BUTTON_DOWN,
+	BUTTON_RIGHT,
+	BUTTON_BACK,
+	BUTTON_SELECT,
+	BUTTON_UNUSED,
+	BUTTON_POWER,
+	BUTTON_REPEAT
+};
 
-/* initialize sensors with interface pins defined in config.h
- * Tested max return value of water level sensor is 320, not 1024 as mentioned in specs.
- * Tested min value is 40. */
-WaterLevelSensor waterLevelSensor(30, 360, 20, WATER_LEVEL_SENSOR_PIN, 1);
+// states of menu
+enum AppModeValues {
+	APP_NORMAL_MODE, APP_MENU_MODE, APP_PROCESS_MENU_CMD
+};
 
-// soil moisture sensors return value high when moisture low. parameter 1 and 2 switched
-SoilMoistureSensor soilMoistureSensor1(1015, 280, 10, SOIL_MOISTURE_SENSOR_1_PIN, 1);
-SoilMoistureSensor soilMoistureSensor2(1015, 280, 10, SOIL_MOISTURE_SENSOR_2_PIN, 2);
+// button used to control menu interaction and starting watering
+byte btn = BUTTON_UNUSED;
+byte appMode = APP_NORMAL_MODE;
+MenuManager Menu1(GMPMenu_Root, menuCount(GMPMenu_Root));
 
-Waterpump waterpump1(WATERPUMP_1_PIN, 1);
-Waterpump waterpump2(WATERPUMP_2_PIN, 2);
+// Initialize with default values defined in config.h
+Potsize potSize1 = DEFAULT_POT_SIZE;
+Potsize potSize2 = DEFAULT_POT_SIZE;
+Moisture neededMoisture1Percent = DEFAULT_MOISTURE;
+Moisture neededMoisture2Percent = DEFAULT_MOISTURE;
+
+// variables are toggled at runtime to handle run and error state
+boolean run = false;
+boolean error = false;
+
+/**************************************************************************************************
+ * DISPLAY FUNCTIONS
+ **************************************************************************************************/
+// fills up char with right padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
+char *rpad(char *dest, const char *str, char chr = ' ', unsigned char width = LCD_COLS) {
+	unsigned char len = strlen(str);
+
+	width = width > LCD_COLS ? LCD_COLS : width;
+
+	if (len < LCD_COLS && width > len) {
+		strcpy(dest, str);
+		strcat(dest, padc(chr, width - len));
+	} else {
+		strncpy(dest, str, width + 1);
+	}
+	return dest;
+}
+
+// fills up char with left padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
+char *lpad(char *dest, const char *str, char chr = ' ',	unsigned char width = LCD_COLS) {
+	unsigned char len = strlen(str);
+
+	width = width > LCD_COLS ? LCD_COLS : width;
+
+	if (len < LCD_COLS && width > len) {
+		strcpy(dest, padc(chr, width - len));
+		strcat(dest, str);
+	} else {
+		strncpy(dest, str, width + 1);
+	}
+	return dest;
+}
+
+// fills up char with padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
+char *padc(char chr, unsigned char count) {
+	static char strbuf[LCD_COLS + 1];
+
+	count = (count > LCD_COLS) ? LCD_COLS : count;
+
+	int i;
+	for (i = 0; i < count; i++) {
+		strbuf[i] = chr;
+	}
+	strbuf[i] = 0;
+
+	return strbuf;
+}
+
+// shows default welcome screen
+void showDefaultScreen() {
+	lcd.clear();
+	lcd.print(DEFAULT_SCREEN);
+	/*reset menu in order to start at root again
+	 * (e. g. if start button was pressed when in menu)*/
+	Menu1.reset();
+}
+
+// clears 2nd line of display
+void clear2ndLine() {
+	showStringMessage(EMPTY_STR, 1, 0);
+}
+
+/* displays given message on given line / row of display
+note: max. length of messages is LCD_COLS, scrolling not yet implemented  */
+void showStringMessage(String message, int line, int offset) {
+	lcd.setCursor(offset, line);
+	char buf[LCD_COLS];
+	// TODO scrolling for longer messages
+	message.toCharArray(buf, len(message) + 1);
+	lcd.print(rpad(strbuf, buf));
+	lcd.print(message);
+}
+
+/**************************************************************************************************
+ * USER INPUT FUNCTIONS (KEYBOARD WHEN DEBUGGING OR IR RECEIVER)
+ **************************************************************************************************/
 
 // returns button for hex key input of IR receiver
 byte mapHexCodeToKey(unsigned long hexCode) {
@@ -78,8 +183,8 @@ byte mapHexCodeToKey(unsigned long hexCode) {
 	}
 }
 
-/*returns true if debounce time (config.h) is exceeded
- * in order to debounce key reading without delay() */
+/* returns true if debounce time (see config.h) is exceeded
+ in order to debounce key reading without delay() */
 boolean isKeyDebounced() {
 	if((millis() - DEBOUNCE_TIME) > lastInputRead) {
 		lastInputRead = millis();
@@ -118,51 +223,7 @@ byte mapASCIICodeToKey(byte asciiCode) {
 	}
 }
 
-/**************************************************************************************************
- * MENU SETUP AND FUNCTIONS
- **************************************************************************************************/
-byte btn = BUTTON_UNUSED; // button
-
-enum AppModeValues {
-	APP_NORMAL_MODE, APP_MENU_MODE, APP_PROCESS_MENU_CMD
-};
-
-/* Apply left padding to string.
-https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library */
-extern char *lpad(char *dest, const char *str, char chr = ' ',
-		unsigned char width = LCD_COLS);
-
-/* Apply right padding to string.
-https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library */
-extern char *rpad(char *dest, const char *str, char chr = ' ',
-		unsigned char width = LCD_COLS);
-
-byte appMode = APP_NORMAL_MODE;
-MenuManager Menu1(GMPMenu_Root, menuCount(GMPMenu_Root));
-
-void showDefaultScreen() {
-	lcd.clear();
-	lcd.print(DEFAULT_SCREEN);
-	/*reset menu in order to start at root again
-	 * (e. g. if start button was pressed when in menu)*/
-	Menu1.reset();
-}
-
-// clears 2nd line
-void clear2ndLine() {
-	showStringMessage(EMPTY_STR, 1, 0);
-}
-
-void showStringMessage(String message, int line, int offset) {
-	lcd.setCursor(offset, line);
-	char buf[LCD_COLS];
-	// TODO scrolling for longer messages
-	message.toCharArray(buf, len(message) + 1);
-	lcd.print(rpad(strbuf, buf));
-	lcd.print(message);
-}
-
-// returns button either from Serial (only in debug mode) or keypad
+// returns button either from Serial (only in debug mode) or IR receiver
 byte getButton() {
 	byte button;
 	unsigned long input;
@@ -190,50 +251,9 @@ byte getButton() {
 	return button;
 }
 
-// fills up char with right padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char *rpad(char *dest, const char *str, char chr, unsigned char width) {
-	unsigned char len = strlen(str);
-
-	width = width > LCD_COLS ? LCD_COLS : width;
-
-	if (len < LCD_COLS && width > len) {
-		strcpy(dest, str);
-		strcat(dest, padc(chr, width - len));
-	} else {
-		strncpy(dest, str, width + 1);
-	}
-	return dest;
-}
-
-// fills up char with left padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char *lpad(char *dest, const char *str, char chr, unsigned char width) {
-	unsigned char len = strlen(str);
-
-	width = width > LCD_COLS ? LCD_COLS : width;
-
-	if (len < LCD_COLS && width > len) {
-		strcpy(dest, padc(chr, width - len));
-		strcat(dest, str);
-	} else {
-		strncpy(dest, str, width + 1);
-	}
-	return dest;
-}
-
-// fills up char with padding, copied and not changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/
-char *padc(char chr, unsigned char count) {
-	static char strbuf[LCD_COLS + 1];
-
-	count = (count > LCD_COLS) ? LCD_COLS : count;
-
-	int i;
-	for (i = 0; i < count; i++) {
-		strbuf[i] = chr;
-	}
-	strbuf[i] = 0;
-
-	return strbuf;
-}
+/**************************************************************************************************
+ * MENU FUNCTIONS
+ **************************************************************************************************/
 
 // Returns pot size (small, medium etc.) as String
 String getPotSizeString(Potsize potSize) {
@@ -271,24 +291,6 @@ String getMoistureString(Moisture moisture) {
 	}
 }
 
-// Returns moisture (low, medium etc.) as percent value
-int getNeededMoisturePercent(Moisture moisture) {
-	switch (moisture) {
-	case moisture_low:
-		return NEEDED_MOISTURE_LOW;
-		break;
-	case moisture_medium:
-		return NEEDED_MOISTURE_MEDIUM;
-		break;
-	case moisture_high:
-		return NEEDED_MOISTURE_HIGH;
-		break;
-	default:
-		return 0;
-		break;
-	}
-}
-
 // stores selected pot size in potSizeVariable
 void togglePotSize(Potsize *potSizeVariable) {
 	Potsize *currentSelection = potSizeVariable;
@@ -313,8 +315,9 @@ void toggleMoisture(Moisture *moistureVariable) {
 	}
 }
 
-// returns true, when processing is completed
-//TODO cases need to be more generic. same things are done multiple times
+/* processes command selected in menu. only called in appMode APP_PROCESS_MENU_CMD.
+returns true, when processing is completed
+TODO cases need to be more generic. same things are done multiple times*/
 byte processMenuCommand(byte cmdId) {
 	byte complete = false; // set to true when menu command processing complete.
 	String currentStateMessage;
@@ -406,7 +409,6 @@ byte processMenuCommand(byte cmdId) {
 	return complete;
 }
 
-//----------------------------------------------------------------------
 // Callback to convert button press to navigation action.
 byte getNavAction() {
 	byte navAction = 0;
@@ -450,9 +452,28 @@ void refreshMenuDisplay(byte refreshMode) {
 		}
 	}
 }
+
 /**************************************************************************************************
  * WATERING FUNCTIONS
  **************************************************************************************************/
+// Returns moisture (low, medium etc.) as percent value
+int getNeededMoisturePercent(Moisture moisture) {
+	switch (moisture) {
+	case moisture_low:
+		return NEEDED_MOISTURE_LOW;
+		break;
+	case moisture_medium:
+		return NEEDED_MOISTURE_MEDIUM;
+		break;
+	case moisture_high:
+		return NEEDED_MOISTURE_HIGH;
+		break;
+	default:
+		return 0;
+		break;
+	}
+}
+
 //returns pot size in milliliters defined in constants in config.h
 int getPotSizeMililiters(Potsize potSize) {
 	switch (potSize) {
@@ -497,9 +518,7 @@ void watering(int pump, int neededMilliliters) {
 		DEBUG_PRINTLN("Duty cycle large");
 		wateringTimeMilliseconds = ((neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
 	}
-	//TODO ugly
 	if(wateringTimeMilliseconds > 0 && pump == 1) {
-		Serial.println(wateringTimeMilliseconds);
 		waterpump1.startWatering(dutyCycle);
 		// store timer id to stop event when gmp is switched off
 		timerId1 = timerPump1.after(wateringTimeMilliseconds, stopPump1);
@@ -523,7 +542,7 @@ boolean isWaterOK(int neededWaterMilliliters) {
 	}
 }
 
-/*TODO not really well implemented, but callback functions do not take
+/*TODO wrapper functions, since callback functions do not take
 parameters and callback on instance not supported by library */
 void setPump1ToReady() {
 	waterpump1.setIsPumpReady(true);
@@ -583,6 +602,9 @@ void switchOff() {
 	setPump2ToReady();
 }
 
+/**************************************************************************************************
+ * ARDUINO MAIN FUNCTIONS
+ **************************************************************************************************/
 void setup() {
 	Serial.begin(9600);
 	Serial.flush(); // Empty serial puffer
@@ -601,13 +623,11 @@ void setup() {
 }
 
 void loop() {
-	/**************************************************************************************************
-	 * MENU EXECUTION
-	 **************************************************************************************************/
 	btn = getButton();
 	// update all timers
 	timerPump1.update();
 	timerPump2.update();
+
 	// indicate state with leds
 	if(run) {
 		digitalWrite(ERROR_LED_PIN, LOW);
@@ -617,6 +637,9 @@ void loop() {
 		digitalWrite(ERROR_LED_PIN, HIGH);
 		digitalWrite(RUN_LED_PIN, LOW);
 	}
+/**************************************************************************************************
+ * MENU EXECUTION
+ **************************************************************************************************/
 	switch (appMode) {
 		case APP_NORMAL_MODE:
 			if (btn == BUTTON_SELECT) {
@@ -654,11 +677,11 @@ void loop() {
 			break;
 		}
 	}
-	/**************************************************************************************************
-	 * WATER PLANTS
-	 **************************************************************************************************/
+/**************************************************************************************************
+ * WATERING
+ **************************************************************************************************/
 	if (btn == BUTTON_POWER)
-// Switch from ON to OFF and vice versa
+	// Switch from ON to OFF and vice versa
 	{
 		if (!run && !error) {
 			switchToRunMode();
@@ -666,21 +689,19 @@ void loop() {
 			switchToOffMode();
 		}
 	}
-	//Serial.println("Water level abs: " + String(waterLevelSensor.getStableValue()));
+	/* check if water level is higher than minimum for pump
+	 * always check when running, not only when plants would need water
+	 * to notice immediately when water is low
+	 */
+	if(run && waterLevelSensor.getPercentValue() <= MIN_WATER_LEVEL_PERCENT) {
+		switchToErrorMode(WATER_LOW_STR);
+	}
 	// watering is continued while in menu. no check for APP_NORMAL_MODE
 	if (!error) {
 		int neededWaterMilliliters;
-//		Serial.println("-------------------");
-//		Serial.println("Run: " + String(run));
-//		Serial.println("Needed water: " + String(getNeededWaterMilliliters(1)));
-//		Serial.println("Water ok: " + String(isWaterOK(getNeededWaterMilliliters(1))));
-//		Serial.println("Water level: " + String(waterLevelSensor.getPercentValue()));
-//		Serial.println("Needed Moist. 1: " + String(getNeededMoisture(neededMoisture1Percent)));
-//		Serial.println("Moist. 1: " + String(soilMoistureSensor1.getPercentValue()));
 		if (run && soilMoistureSensor1.getPercentValue() < getNeededMoisturePercent(neededMoisture1Percent)) {
 			neededWaterMilliliters = getNeededWaterMilliliters(1);
 			if (isWaterOK(neededWaterMilliliters && waterpump1.getIsPumpReady())) {
-				//TODO write log message
 				if (waterpump1.getIsPumpReady()) {
 					watering(1, neededWaterMilliliters);
 					// supress Message when in Menu
@@ -711,4 +732,3 @@ void loop() {
 		}
 	}
 }
-

@@ -2,7 +2,8 @@
  * WaterLevelSensor.h
  *
  *  Created on: 19.07.2019
- *      Author: TAARISI3
+ *  Author: GMP Team
+ *  Version: 1.0
  */
 
 #ifndef WATERLEVELSENSOR_H_
@@ -12,7 +13,7 @@
 class WaterLevelSensor: public Sensor {
 public:
 	WaterLevelSensor(int lowValue, int highValue, int toleratedDeviation,
-			byte pin, int id);
+			byte pin);
 };
 
 #endif /* WATERLEVELSENSOR_H_ */

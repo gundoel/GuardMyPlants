@@ -2,7 +2,8 @@
  * config.h defines basic settings like pins, messages and debug mode
  *
  *  Created on: 14.08.2019
- *      Author: TAARISI3
+ *      Author: GMP Team
+ *      Version: 1.0
  */
 
 #ifndef CONFIG_H_
@@ -115,18 +116,6 @@ const byte ERROR_LED_PIN = 4;
 /**************************************************************************************************
  * BUTTONS
  **************************************************************************************************/
-// defines used buttons (input values are mapped to these buttons)
-enum {
-	BUTTON_UP,
-	BUTTON_DOWN,
-	BUTTON_RIGHT,
-	BUTTON_BACK,
-	BUTTON_SELECT,
-	BUTTON_UNUSED,
-	BUTTON_POWER,
-	BUTTON_REPEAT
-};
-
 const unsigned long DEBOUNCE_TIME = 500;
 
 #endif /* CONFIG_H_ */
