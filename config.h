@@ -22,21 +22,23 @@ const boolean SERIAL_CONTROL_ACTIVE = false;
  * PUMP & WATER TANK
  **************************************************************************************************/
 // defines pwm values for different flow rates
-const int DUTY_CYCLE_SMALL = 55; // Duty Cycle for small amounts
+const int DUTY_CYCLE_SMALL = 70; // Duty Cycle for small amounts
 const int DUTY_CYCLE_MEDIUM = 100; // Duty Cycle for medium amounts
 const int DUTY_CYCLE_LARGE = 150; // Duty Cycle for large amounts
 
 // defines flow rate of pump in milliliters
-const float PUMP_CAPACITY_SMALL = 6; // 6 ml/s
-const float PUMP_CAPACITY_MEDIUM = 19; // 19 ml/s
-const float PUMP_CAPACITY_LARGE = 23; // 23 ml/s
+const int PUMP_CAPACITY_SMALL = 3; // 3 ml/s
+const int PUMP_CAPACITY_MEDIUM = 10; // 10 ml/s
+const int PUMP_CAPACITY_LARGE = 16; // 16 ml/s
 
 // defines how many per cent of pot size are pumped into the pot in 1 cycle. e. g. pot = 500ml -> 50ml
 const int DEFAULT_PERCENTAGE_POT_SIZE = 10;
 
+// defines how much water is pumped in test mode
+const int TEST_MODE_WATER_ML = 100;
+
 // defines capacity of water tank in milliliters
-// TODO measure full tank and set value here
-const int WATER_TANK_CAPACITY = 1000;
+const int WATER_TANK_CAPACITY_ML = 3000;
 // defines a minimum for water level to prevent pumps from sucking in air an breaking
 const int MIN_WATER_LEVEL_PERCENT = 10;
 
@@ -45,12 +47,12 @@ const int MIN_WATER_LEVEL_PERCENT = 10;
  **************************************************************************************************/
 // minimum potsize values in milliliters
 // edit POT_SIZE_STR if edited
-const int POT_SIZE_SMALL = 100;
+const int POT_SIZE_SMALL = 200;
 const int POT_SIZE_MEDIUM = 500;
 const int POT_SIZE_LARGE = 1000;
 
 // time in milliseconds water needs to seep away before watering again
-const unsigned long SEEP_AWAY_TIME_MS = 5000;
+const int SEEP_AWAY_TIME_MS = 5000;
 
 enum Potsize {
 	pot_size_small, pot_size_medium, pot_size_large
@@ -73,11 +75,11 @@ const String DEFAULT_SCREEN = "GuardMyPlants";
 const String RESET_CONFIRM = "Sicher?";
 
 // available pot sizes. sequence must correspond with enum Potsize
-const String POT_SIZE_STR[] { "klein >= 100ml", "mittel >= 500ml", "gross >=1000ml" };
+const String POT_SIZE_STR[] { "klein >= 200ml", "mittel >= 500ml", "gross >=1000ml" };
 
 // minimal moisture in a pot (%). sequence must correspond with enum Moisture
 const String POT_MOISTURE_STR[] { "leicht feucht", "mittelfeucht", "feucht" };
-const String WATERING_STR = "Bewaesserung";
+const String WATERING_STR = "Bewaesserung...";
 const String WATER_LOW_STR = "Tank fuellen!";
 const String LITER_STR = "Liter";
 
@@ -89,14 +91,7 @@ const String LITER_STR = "Liter";
 
 // Empty String for padding etc. used in menus
 const char EMPTY_STR[] = "";
-enum {
-	LCD_PIN1 = 8,
-	LCD_PIN2 = 9,
-	LCD_PIN3 = 10,
-	LCD_PIN4 = 11,
-	LCD_PIN5 = 12,
-	LCD_PIN6 = 13
-};
+const byte lcdPins[] {8, 9, 10, 11, 12, 13};
 
 /**************************************************************************************************
  * PINS
@@ -114,8 +109,8 @@ const byte RUN_LED_PIN = 3;
 const byte ERROR_LED_PIN = 4;
 
 /**************************************************************************************************
- * BUTTONS
+ * CONTROL
  **************************************************************************************************/
-const unsigned long DEBOUNCE_TIME = 500;
+const int DEBOUNCE_TIME = 500;
 
 #endif /* CONFIG_H_ */

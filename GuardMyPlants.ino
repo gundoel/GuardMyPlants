@@ -1,3 +1,13 @@
+/*
+ * GuardMyPlants.ino
+ *
+ *  Created on: 28.07.2019
+ *  Author: GMP Team
+ *  Version: 1.0
+ *  Main Arduino Sketch. Libraries and additional files included here.
+ */
+
+
 #include "debug.h"
 #include <Arduino.h>
 #include <IRremote.h>
@@ -22,7 +32,7 @@ using namespace gmp_math_utils;
 char strbuf[LCD_COLS + 1];
 
 // initialize lcd with interface pins defined in config.h
-LiquidCrystal lcd(LCD_PIN1, LCD_PIN2, LCD_PIN3, LCD_PIN4, LCD_PIN5, LCD_PIN6);
+LiquidCrystal lcd(lcdPins[0], lcdPins[1], lcdPins[2], lcdPins[3], lcdPins[4], lcdPins[5]);
 
 // timers to switch off pump after calculated run time
 Timer timerPump1;
@@ -43,13 +53,13 @@ Waterpump waterpump1(WATERPUMP_1_PIN);
 Waterpump waterpump2(WATERPUMP_2_PIN);
 
 // IR receiver
-IRrecv irrecv(IR_RECEIVER_PIN);
+IRrecv irReceiver(IR_RECEIVER_PIN);
 decode_results results;
 // milliseconds when last input was read (used for debouncing)
 unsigned long lastInputRead = 0;
 
 // defines used buttons (input values are mapped to these buttons)
-enum {
+enum Buttons {
 	BUTTON_UP,
 	BUTTON_DOWN,
 	BUTTON_RIGHT,
@@ -68,7 +78,7 @@ enum AppModeValues {
 // button used to control menu interaction and starting watering
 byte btn = BUTTON_UNUSED;
 byte appMode = APP_NORMAL_MODE;
-MenuManager Menu1(GMPMenu_Root, menuCount(GMPMenu_Root));
+MenuManager GMPMenu(GMPMenu_Root, menuCount(GMPMenu_Root));
 
 // Initialize with default values defined in config.h
 Potsize potSize1 = DEFAULT_POT_SIZE;
@@ -134,7 +144,7 @@ void showDefaultScreen() {
 	lcd.print(DEFAULT_SCREEN);
 	/*reset menu in order to start at root again
 	 * (e. g. if start button was pressed when in menu)*/
-	Menu1.reset();
+	GMPMenu.reset();
 }
 
 // clears 2nd line of display
@@ -159,25 +169,65 @@ void showStringMessage(String message, int line, int offset) {
 
 // returns button for hex key input of IR receiver
 byte mapHexCodeToKey(unsigned long hexCode) {
+	Serial.println(String(hexCode));
 	switch (hexCode) {
-	case 0x511DBB: // VOL+
-		return BUTTON_UP;
-	case 0xE5CFBD7F: // UP
-		return BUTTON_UP;
-	case 0x52A3D41F: // FAST BACK
-		return BUTTON_BACK;
-	case 0xD7E84B1B: // PLAY/PAUSE
+	case 0x511DBB:
+		return BUTTON_UP; // VOL+
+	case 0xE5CFBD7F:
+		return BUTTON_UP;// UP
+	case 0x52A3D41F:
+		return BUTTON_BACK; // FAST BACK
+	case 16712445:
 		return BUTTON_SELECT;
-	case 0x20FE4DBB: // FAST FORWARD
+	case 0xD7E84B1B:
+		return BUTTON_SELECT; // PLAY/PAUSE
+	case 16761405:
 		return BUTTON_RIGHT;
-	case 0xA3C8EDDB: // Vol-
+	case 0x20FE4DBB:
+		return BUTTON_RIGHT; // FAST FORWARD
+	case 16754775:
 		return BUTTON_DOWN;
-	case 0xF076C13B: // DOWN
-		return BUTTON_DOWN;
-	case 0xE318261B: // POWER
-		return BUTTON_POWER;
+	case 0xA3C8EDDB:
+		return BUTTON_DOWN; // Vol-
+	case 0xF076C13B:
+		return BUTTON_DOWN; // DOWN
+	case 0xE318261B:
+		return BUTTON_POWER; // POWER
 	case 0xFFFFFFFF:
 		return BUTTON_REPEAT;
+	default:
+		return BUTTON_UNUSED;
+	}
+}
+
+// returns button for ascii code input of serial interface
+byte mapASCIICodeToKey(byte asciiCode) {
+	Serial.println(String(asciiCode));
+	switch (asciiCode) {
+	case 87:
+		return BUTTON_UP; // W = BUTTON_UP
+	case 88:
+		return BUTTON_DOWN; // X = BUTTON_DOWN
+	case 68:
+		return BUTTON_RIGHT; // D = BUTTON_RIGHT
+	case 65:
+		return BUTTON_BACK; // A = BUTTON_BACK
+	case 83:
+		return BUTTON_SELECT; // S = BUTTON_SELECT
+	case 82:
+		return BUTTON_POWER; // R = BUTTON_POWER
+	case 119:
+		return BUTTON_UP; // w = BUTTON_UP
+	case 120:
+		return BUTTON_DOWN; // x = BUTTON_DOWN
+	case 100:
+		return BUTTON_RIGHT; // d = BUTTON_RIGHT
+	case 97:
+		return BUTTON_BACK; // a = BUTTON_BACK
+	case 115:
+		return BUTTON_SELECT; // s = BUTTON_SELECT
+	case 114:
+		return BUTTON_POWER; // r = BUTTON_POWER
 	default:
 		return BUTTON_UNUSED;
 	}
@@ -195,40 +245,13 @@ boolean isKeyDebounced() {
 	}
 }
 
-// returns button for ascii code input of serial interface
-byte mapASCIICodeToKey(byte asciiCode) {
-	switch (asciiCode) {
-	case 87:
-		return BUTTON_UP; // W = BUTTON_UP
-	case 88:
-		return BUTTON_DOWN; // X = BUTTON_DOWN
-	case 68:
-		return BUTTON_RIGHT; // D = BUTTON_RIGHT
-	case 65:
-		return BUTTON_BACK; // A = BUTTON_BACK
-	case 83:
-		return BUTTON_SELECT; // S = BUTTON_SELECT
-	case 119:
-		return BUTTON_UP; // w = BUTTON_UP
-	case 120:
-		return BUTTON_DOWN; // x = BUTTON_DOWN
-	case 100:
-		return BUTTON_RIGHT; // d = BUTTON_RIGHT
-	case 97:
-		return BUTTON_BACK; // a = BUTTON_BACK
-	case 115:
-		return BUTTON_SELECT; // s = BUTTON_SELECT
-	default:
-		return BUTTON_UNUSED;
-	}
-}
-
 // returns button either from Serial (only in debug mode) or IR receiver
 byte getButton() {
 	byte button;
 	unsigned long input;
-	// for development, when no keypad is connected to arduino. no debouncing needed
-	if (SERIAL_CONTROL_ACTIVE && Serial.available() > 0) {
+	// for development, when no keypad is connected to arduino
+	// TODO menu works only if key is debounced -> does not make sense
+	if (SERIAL_CONTROL_ACTIVE && Serial.available() > 0 && isKeyDebounced()) {
 		input = Serial.read();
 		// Carriage return
 		if (input != '\r') {
@@ -237,10 +260,10 @@ byte getButton() {
 		}
 	}
 	// IR receiver
-	else if (!SERIAL_CONTROL_ACTIVE && irrecv.decode(&results) && isKeyDebounced()) {
+	else if (!SERIAL_CONTROL_ACTIVE && irReceiver.decode(&results) && isKeyDebounced()) {
 		input = results.value;
 		int tmpButton = mapHexCodeToKey(input);
-		irrecv.resume();
+		irReceiver.resume();
 		if (tmpButton != BUTTON_REPEAT) {
 			button = tmpButton;
 		}
@@ -317,38 +340,46 @@ void toggleMoisture(Moisture *moistureVariable) {
 
 /* processes command selected in menu. only called in appMode APP_PROCESS_MENU_CMD.
 returns true, when processing is completed
-TODO cases need to be more generic. same things are done multiple times*/
+TODO cases could be more generic. same things are done multiple times*/
 byte processMenuCommand(byte cmdId) {
 	byte complete = false; // set to true when menu command processing complete.
 	String currentStateMessage;
 	Potsize *currentPotSelection;
 	Moisture *currentMoistureSelection;
 	switch (cmdId) {
+	// indicates current water level in tank
 	case menuCommandWaterlevel: {
 		int waterLevelPercent = (int) waterLevelSensor.getPercentValue();
 		currentStateMessage = String(waterLevelPercent) + "% "
-				+ String(multiplyPercent(WATER_TANK_CAPACITY, waterLevelPercent)/ 1000) +
+				+ String(multiplyPercent(WATER_TANK_CAPACITY_ML, waterLevelPercent)/ 1000) +
 				" " + LITER_STR;
 		break;
 	}
+	// indicates current moisture in pot 1
 	case menuCommandPot1Moisture: {
 		currentStateMessage = String(soilMoistureSensor1.getPercentValue())	+ "%, ";
 		break;
 	}
+	// indicates current moisture in pot 2
 	case menuCommandPot2Moisture: {
 		currentStateMessage = String(soilMoistureSensor2.getPercentValue())	+ "%, ";
 		break;
 	}
+	// pumps amount of water defined in config.h int pot 1
 	case menuCommandPot1Pump: {
-		watering(1, 100);
+		doWaterPlants(1, TEST_MODE_WATER_ML);
 		complete = true;
 		break;
 	}
+	// pumps amount of water defined in config.h int pot 2
 	case menuCommandPot2Pump: {
-		watering(2, 100);
+		//showStringMessage(String(TEST_MODE_WATER_ML) + MILLILITER_STR, 2, 1);
+		//showStringMessage("hans", 1, 1);
+		doWaterPlants(2, TEST_MODE_WATER_ML);
 		complete = true;
 		break;
 	}
+	// toggles pot size for pot 1. selection is stored immediately (no action needed)
 	case menuCommandPot1Size_Selection: {
 		currentPotSelection = &potSize1;
 		currentStateMessage = getPotSizeString(*currentPotSelection);
@@ -358,6 +389,7 @@ byte processMenuCommand(byte cmdId) {
 		}
 		break;
 	}
+	// toggles pot size for pot 2. selection is stored immediately (no action needed)
 	case menuCommandPot2Size_Selection: {
 		currentPotSelection = &potSize2;
 		currentStateMessage = getPotSizeString(*currentPotSelection);
@@ -367,6 +399,7 @@ byte processMenuCommand(byte cmdId) {
 		}
 		break;
 	}
+	// toggles needed moisture for pot 1. selection is stored immediately (no action needed)
 	case menuCommandPot1Moisture_Selection: {
 		currentMoistureSelection = &neededMoisture1Percent;
 		currentStateMessage = getMoistureString(*currentMoistureSelection);
@@ -376,6 +409,7 @@ byte processMenuCommand(byte cmdId) {
 		}
 		break;
 	}
+	// toggles needed moisture for pot 2. selection is stored immediately (no action needed)
 	case menuCommandPot2Moisture_Selection: {
 		currentMoistureSelection = &neededMoisture2Percent;
 		currentStateMessage = getMoistureString(*currentMoistureSelection);
@@ -385,8 +419,10 @@ byte processMenuCommand(byte cmdId) {
 		}
 		break;
 	}
+	// resets pot size and moisture to default values defined in config.h
 	case menuCommandReset: {
-		showStringMessage(RESET_CONFIRM, 1, 0);
+		currentStateMessage = RESET_CONFIRM;
+		//showStringMessage(RESET_CONFIRM, 1, 0);
 		if (btn == BUTTON_SELECT) {
 			neededMoisture1Percent = DEFAULT_MOISTURE;
 			neededMoisture2Percent = DEFAULT_MOISTURE;
@@ -409,10 +445,11 @@ byte processMenuCommand(byte cmdId) {
 	return complete;
 }
 
-// Callback to convert button press to navigation action.
+/* Callback to convert button press to navigation action.
+ * copied but changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/ */
 byte getNavAction() {
 	byte navAction = 0;
-	byte currentItemHasChildren = Menu1.currentItemHasChildren();
+	byte currentItemHasChildren = GMPMenu.currentItemHasChildren();
 	if (btn == BUTTON_UP)
 		navAction = MENU_ITEM_PREV;
 	else if (btn == BUTTON_DOWN)
@@ -425,20 +462,21 @@ byte getNavAction() {
 	return navAction;
 }
 
-// Callback to refresh display during menu navigation, using parameter of type enum DisplayRefreshMode.
+/* Callback to refresh display during menu navigation, using parameter of type enum DisplayRefreshMode.
+ * copied but changed from https://www.cohesivecomputing.co.uk/hackatronics/arduino-lcd-menu-library/ */
 void refreshMenuDisplay(byte refreshMode) {
 	char nameBuf[LCD_COLS + 1];
 	lcd.setCursor(0, 0);
-	if (Menu1.currentItemHasChildren()) {
-		rpad(strbuf, Menu1.getCurrentItemName(nameBuf));
+	if (GMPMenu.currentItemHasChildren()) {
+		rpad(strbuf, GMPMenu.getCurrentItemName(nameBuf));
 		strbuf[LCD_COLS - 1] = 0b01111110; // Display forward arrow if this menu item has children.
 		lcd.print(strbuf);
 		clear2ndLine();
 	} else {
 		byte cmdId;
-		rpad(strbuf, Menu1.getCurrentItemName(nameBuf));
+		rpad(strbuf, GMPMenu.getCurrentItemName(nameBuf));
 
-		if ((cmdId = Menu1.getCurrentItemCmdId()) == 0) {
+		if ((cmdId = GMPMenu.getCurrentItemCmdId()) == 0) {
 			strbuf[LCD_COLS - 1] = 0b01111111; // Display back arrow if this menu item ascends to parent.
 			lcd.print(strbuf);
 			// clear 2nd line
@@ -500,7 +538,7 @@ int getNeededWaterMilliliters(int pot) {
 
 /* returns watering time in milliseconds depending on
 requested quantity. duty cycle is adapted in order to avoid overflow */
-void watering(int pump, int neededMilliliters) {
+void doWaterPlants(int pumpNr, int neededMilliliters) {
 	double wateringTimeMilliseconds;
 	int dutyCycle;
 	if (neededMilliliters > 0 && neededMilliliters <= 20) {
@@ -518,12 +556,12 @@ void watering(int pump, int neededMilliliters) {
 		DEBUG_PRINTLN("Duty cycle large");
 		wateringTimeMilliseconds = ((neededMilliliters / PUMP_CAPACITY_LARGE) * 1000);
 	}
-	if(wateringTimeMilliseconds > 0 && pump == 1) {
+	if(wateringTimeMilliseconds > 0 && pumpNr == 1) {
 		waterpump1.startWatering(dutyCycle);
 		// store timer id to stop event when gmp is switched off
 		timerId1 = timerPump1.after(wateringTimeMilliseconds, stopPump1);
 	}
-	else if (wateringTimeMilliseconds > 0 && pump == 2) {
+	else if (wateringTimeMilliseconds > 0 && pumpNr == 2) {
 		waterpump2.startWatering(dutyCycle);
 		// store timer id to stop event when gmp is switched off
 		timerId2 = timerPump2.after(wateringTimeMilliseconds, stopPump2);
@@ -531,10 +569,10 @@ void watering(int pump, int neededMilliliters) {
 }
 
 // returns if enough water for next cycle is in tank
-boolean isWaterOK(int neededWaterMilliliters) {
+boolean isWaterOKForCurrentCycle(int neededWaterMilliliters) {
 	// check if enough water is in water tank
 	if (neededWaterMilliliters
-			<= multiplyPercent(subtractPercent(WATER_TANK_CAPACITY, MIN_WATER_LEVEL_PERCENT),
+			<= multiplyPercent(subtractPercent(WATER_TANK_CAPACITY_ML, MIN_WATER_LEVEL_PERCENT),
 					waterLevelSensor.getPercentValue())) {
 		return true;
 	} else {
@@ -542,8 +580,8 @@ boolean isWaterOK(int neededWaterMilliliters) {
 	}
 }
 
-/*TODO wrapper functions, since callback functions do not take
-parameters and callback on instance not supported by library */
+/* wrapper functions, since callback functions do not take
+parameters and callback on object instance not supported by timer library */
 void setPump1ToReady() {
 	waterpump1.setIsPumpReady(true);
 }
@@ -566,6 +604,7 @@ void stopPump2() {
 	clear2ndLine();
 }
 
+// starts watering program
 void switchToRunMode() {
 	error = false;
 	run = true;
@@ -573,12 +612,7 @@ void switchToRunMode() {
 	appMode = APP_NORMAL_MODE;
 }
 
-void switchToErrorMode(String errorMessage) {
-	error = true;
-	switchOff();
-	showStringMessage(errorMessage, 1, 0);
-}
-
+// resets error (in case of error) and stops watering program
 void switchToOffMode() {
 	//reset error led
 	error = false;
@@ -586,7 +620,14 @@ void switchToOffMode() {
 	clear2ndLine();
 }
 
-// stops watering
+// changes state to error and stops watering program
+void switchToErrorMode(String errorMessage) {
+	error = true;
+	switchOff();
+	showStringMessage(errorMessage, 1, 0);
+}
+
+// stops watering program
 void switchOff() {
 	run = false;
 	// stop pumps
@@ -597,7 +638,7 @@ void switchOff() {
 	timerPump2.stop(timerId2);
 	digitalWrite(RUN_LED_PIN, LOW);
 	digitalWrite(ERROR_LED_PIN, LOW);
-	// reset pumps to allow sartup
+	// reset pumps to allow startup
 	setPump1ToReady();
 	setPump2ToReady();
 }
@@ -619,7 +660,7 @@ void setup() {
 	pinMode(RUN_LED_PIN, OUTPUT);
 
 	// enable IR receiver
-	irrecv.enableIRIn();
+	irReceiver.enableIRIn();
 }
 
 void loop() {
@@ -649,7 +690,7 @@ void loop() {
 			}
 			break;
 		case APP_MENU_MODE: {
-			byte menuMode = Menu1.handleNavigation(getNavAction,
+			byte menuMode = GMPMenu.handleNavigation(getNavAction,
 					refreshMenuDisplay);
 
 			if (menuMode == MENU_EXIT) {
@@ -668,7 +709,7 @@ void loop() {
 		}
 		case APP_PROCESS_MENU_CMD: {
 			byte processingComplete = processMenuCommand(
-					Menu1.getCurrentItemCmdId());
+					GMPMenu.getCurrentItemCmdId());
 
 			if (processingComplete) {
 				appMode = APP_MENU_MODE;
@@ -699,35 +740,41 @@ void loop() {
 	// watering is continued while in menu. no check for APP_NORMAL_MODE
 	if (!error) {
 		int neededWaterMilliliters;
-		if (run && soilMoistureSensor1.getPercentValue() < getNeededMoisturePercent(neededMoisture1Percent)) {
-			neededWaterMilliliters = getNeededWaterMilliliters(1);
-			if (isWaterOK(neededWaterMilliliters && waterpump1.getIsPumpReady())) {
-				if (waterpump1.getIsPumpReady()) {
-					watering(1, neededWaterMilliliters);
+		// pump is running or water is seeping away, if pump is not ready
+		if(run && waterpump1.getIsPumpReady()) {
+			// watering necessary?
+			if (soilMoistureSensor1.getPercentValue() < getNeededMoisturePercent(neededMoisture1Percent)) {
+				neededWaterMilliliters = getNeededWaterMilliliters(1);
+				// enough water for current cycle?
+				if (isWaterOKForCurrentCycle(neededWaterMilliliters)) {
+					doWaterPlants(1, neededWaterMilliliters);
 					// supress Message when in Menu
 					if(appMode == APP_NORMAL_MODE) {
 						showStringMessage(WATERING_STR, 1, 0);
 					}
+				} else {
+					/* shutdown, even though there could be enough water for
+					 * multiple cycles with plant 2 (smaller pot): plant 1 would die
+					 * unnoticed otherwise */
+					switchToErrorMode(WATER_LOW_STR);
 				}
-			} else {
-				/* shutdown, even though there could be enough water for
-				 * multiple cycles with plant 2 (smaller pot): plant 1 would die
-				 * unnoticed otherwise */
-				switchToErrorMode(WATER_LOW_STR);
 			}
 		}
-		if (run && soilMoistureSensor2.getPercentValue() < getNeededMoisturePercent(neededMoisture2Percent)) {
-			neededWaterMilliliters = getNeededWaterMilliliters(2);
-			if (isWaterOK(neededWaterMilliliters)) {
-				if (waterpump2.getIsPumpReady()) {
+		// pump is running or water is seeping away, if pump is not ready
+		if(run && waterpump2.getIsPumpReady()) {
+			// watering necessary?
+			if (soilMoistureSensor2.getPercentValue() < getNeededMoisturePercent(neededMoisture2Percent)) {
+				neededWaterMilliliters = getNeededWaterMilliliters(2);
+				// enough water for current cycle?
+				if (isWaterOKForCurrentCycle(neededWaterMilliliters)) {
+					doWaterPlants(2, neededWaterMilliliters);
 					// supress Message when in Menu
 					if(appMode == APP_NORMAL_MODE) {
 						showStringMessage(WATERING_STR, 1, 0);
 					}
-					watering(2, neededWaterMilliliters);
+				} else {
+					switchToErrorMode(WATER_LOW_STR);
 				}
-			} else {
-				switchToErrorMode(WATER_LOW_STR);
 			}
 		}
 	}
